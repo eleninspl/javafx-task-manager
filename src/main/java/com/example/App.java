@@ -61,6 +61,7 @@ public class App extends Application {
     public void start(Stage primaryStage) {
         initServices();
         loadData();
+        taskService.checkOverdueTasks();
         checkForDelayedTasks();
         
         // Build UI panels
