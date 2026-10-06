@@ -1,8 +1,12 @@
 # MediaLab Assistant
 
+[![CI](https://github.com/eleninspl/javafx-task-manager/actions/workflows/ci.yml/badge.svg)](https://github.com/eleninspl/javafx-task-manager/actions/workflows/ci.yml)
+
 A desktop task manager built with Java 17 and JavaFX. It lets you organize tasks by category and priority, schedule reminders, and track deadlines. All data is saved locally as JSON.
 
 I built it for the Multimedia Technology course at the School of Electrical and Computer Engineering, National Technical University of Athens (NTUA).
+
+![Tasks view grouped by category, with an overdue task marked Delayed](docs/screenshots/tasks.png)
 
 ## Features
 
@@ -12,6 +16,11 @@ I built it for the Multimedia Technology course at the School of Electrical and 
 - **Reminders**: A task can have several reminders: one day, one week or one month before the due date, or on a custom date. Reminder dates are validated against the due date and today's date. When a task's due date changes, its reminders are recalculated. When a task is completed or becomes delayed, its reminders are removed. Reminders due today appear in a dialog at startup.
 - **Search**: Filter tasks by any combination of title, category and priority.
 - **Dashboard**: The header shows totals for all tasks, completed tasks, delayed tasks and tasks due in the next 7 days. It updates as you make changes.
+- **Autosave**: Every change is saved immediately. Files are written atomically, so a crash cannot leave a half-written data file.
+
+| Search | Reminders |
+|--------|-----------|
+| ![Search filtered by priority](docs/screenshots/search.png) | ![Reminders list](docs/screenshots/reminders.png) |
 
 ## Tech stack
 
@@ -20,14 +29,15 @@ I built it for the Multimedia Technology course at the School of Electrical and 
 | Language    | Java 17                             |
 | UI          | JavaFX 21 (layouts written in code) |
 | Persistence | JSON via Gson 2.10                  |
-| Build       | Maven, `javafx-maven-plugin`        |
+| Testing     | JUnit 5                             |
+| Build / CI  | Maven, GitHub Actions               |
 
 ## Architecture
 
 The code is split into layers so that business rules do not depend on the UI:
 
 ```
-com.example
+io.github.eleninspl.taskmanager
 ├── App.java              Entry point: wires services and controllers, builds the main window
 ├── model/                Task, Category, Priority, Reminder, plus TaskStatus and ReminderType enums
 ├── service/              Business rules and in-memory state (CRUD, cascades, reminder validation)
@@ -38,7 +48,7 @@ com.example
 
 - **Services** keep their data in JavaFX `ObservableList`s, so the table views update automatically when the data changes.
 - **Cross-entity rules** are handled in the service layer, not the controllers. Examples: deleting a category also deletes its tasks and their reminders, and changing a due date recalculates reminders.
-- **Persistence**: Data is loaded once at startup and written back when the window closes. It is stored in four files under `medialab/` in the working directory: `tasks.json`, `categories.json`, `priorities.json` and `reminders.json`.
+- **Persistence**: Data is loaded at startup. Any change to a list triggers a save, and changes made in the same UI event (for example a category delete that also removes its tasks and reminders) are batched into one write. After loading, each task is linked back to the shared category and priority objects, so a rename shows up everywhere.
 
 ## Getting started
 
@@ -55,12 +65,19 @@ cd javafx-task-manager
 mvn javafx:run
 ```
 
-The `medialab/` data directory is created on first exit, in the directory you launched from.
+Data is stored in `~/.medialab-assistant/` as four JSON files: `tasks.json`, `categories.json`, `priorities.json` and `reminders.json`. To use a different folder, for example a throwaway demo dataset, set the `medialab.dataDir` system property.
+
+### Test
+
+```bash
+mvn test
+```
+
+The tests cover the service layer and storage: overdue detection, reminder validation and recalculation, cascading deletes, protected defaults, JSON round-trips, and reference linking after a reload. CI runs the build and tests on Linux, Windows and macOS for every push.
 
 ## Documentation
 
-- [`report.pdf`](report.pdf): Project report covering design decisions and assumptions
-- [`multimedia_project_guidelines.pdf`](multimedia_project_guidelines.pdf): Original assignment specification
+- [`docs/report.pdf`](docs/report.pdf): Project report covering features, design and data model (in Greek)
 
 ## Design assumptions
 
