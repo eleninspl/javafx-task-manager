@@ -1,94 +1,69 @@
-# MediaLab Assistant  
-### Task Management System
+# MediaLab Assistant
 
----
+A desktop task manager built with Java 17 and JavaFX. It lets you organize tasks by category and priority, schedule reminders, and track deadlines. All data is saved locally as JSON.
 
-## 📌 Overview
+I built it for the Multimedia Technology course at the School of Electrical and Computer Engineering, National Technical University of Athens (NTUA).
 
-**MediaLab Assistant** is a Task Management System developed in **Java** using **JavaFX** for the graphical user interface and **JSON files** for persistent storage.  
-It helps users organize and monitor their tasks efficiently, offering features like task creation, editing, deletion, searching, as well as management of categories, priority levels, and reminders.
+## Features
 
----
+- **Tasks**: Create, edit and delete tasks. Each task has a title, description, category, priority, due date and status (Open, In Progress, Postponed, Completed or Delayed).
+- **Deadline tracking**: Overdue tasks that are not completed are marked Delayed, and the user is warned at startup.
+- **Categories and priorities**: Fully editable. A protected default ("No Category" / "Default") cannot be renamed or removed. Deleting a category also deletes its tasks. Deleting a priority moves its tasks to the default priority.
+- **Reminders**: A task can have several reminders: one day, one week or one month before the due date, or on a custom date. Reminder dates are validated against the due date and today's date. When a task's due date changes, its reminders are recalculated. When a task is completed or becomes delayed, its reminders are removed. Reminders due today appear in a dialog at startup.
+- **Search**: Filter tasks by any combination of title, category and priority.
+- **Dashboard**: The header shows totals for all tasks, completed tasks, delayed tasks and tasks due in the next 7 days. It updates as you make changes.
 
-## ✨ Features
+## Tech stack
 
-### 📝 Task Management
-- **Create Tasks**: Each task includes a title, description, category, priority, due date (without time), and status (`Open` by default).
-- **Automatic Status Updates**: If the deadline has passed and the task isn't completed, its status changes to `Delayed`.
-- **Edit/Delete Tasks**: Modify any task element or delete tasks. Deleting a task also removes all associated reminders.
+| Area        | Technology                          |
+|-------------|-------------------------------------|
+| Language    | Java 17                             |
+| UI          | JavaFX 21 (layouts written in code) |
+| Persistence | JSON via Gson 2.10                  |
+| Build       | Maven, `javafx-maven-plugin`        |
 
-### 🗂️ Category Management
-- Add, rename, or delete categories.
-- Default category `"No Category"` is protected and cannot be removed or edited.
-- Deleting a category removes all associated tasks and updates reminders.
+## Architecture
 
-### 🔺 Priority Level Management
-- Users can add, rename, or delete priority levels.
-- A default `"Default"` priority exists and cannot be modified or removed.
-- Tasks using a deleted priority are reassigned to `"Default"`.
+The code is split into layers so that business rules do not depend on the UI:
 
-### ⏰ Reminder Management
-- Multiple reminders per task (1 day/week/month before, or a custom date).
-- Reminders cannot be set for `Completed` tasks.
-- Automatic validation ensures logical scheduling.
-- Reminders are removed when task status becomes `Completed` or `Delayed`.
+```
+com.example
+├── App.java              Entry point: wires services and controllers, builds the main window
+├── model/                Task, Category, Priority, Reminder, plus TaskStatus and ReminderType enums
+├── service/              Business rules and in-memory state (CRUD, cascades, reminder validation)
+├── controller/           One controller per screen (Tasks, Categories, Priorities, Reminders, Search)
+│   └── dialog/           Create and edit dialogs
+└── storage/              JsonStorage (Gson) and a LocalDate type adapter
+```
 
-### 🔍 Task Search
-- Search by combinations of title, category, and priority.
-- Results show title, priority, category, and due date.
+- **Services** keep their data in JavaFX `ObservableList`s, so the table views update automatically when the data changes.
+- **Cross-entity rules** are handled in the service layer, not the controllers. Examples: deleting a category also deletes its tasks and their reminders, and changing a due date recalculates reminders.
+- **Persistence**: Data is loaded once at startup and written back when the window closes. It is stored in four files under `medialab/` in the working directory: `tasks.json`, `categories.json`, `priorities.json` and `reminders.json`.
 
----
+## Getting started
 
-## 🧱 Project Structure
+### Prerequisites
 
-### 📦 Model Layer
-Defines core data entities:
-- `Task`, `Category`, `Priority`, `Reminder`
-- Data is stored in:
-  - `tasks.json`
-  - `categories.json`
-  - `priorities.json`
-  - `reminders.json`
+- JDK 17 or later
+- Maven 3.8 or later
 
-### ⚙️ Service Layer
-Business logic:
-- `TaskService`, `CategoryService`, `PriorityService`, `ReminderService`
-- Responsible for CRUD operations and JSON I/O.
+### Run
 
-### 🧭 Controller Layer
-Connects GUI with logic:
-- `TaskController`, `CategoryController`, `PriorityController`, `ReminderController`
-- Handles UI actions, updates views, manages user interactions.
+```bash
+git clone https://github.com/eleninspl/javafx-task-manager.git
+cd "javafx-task-manager/Task Managment System"
+mvn javafx:run
+```
 
----
+The `medialab/` data directory is created on first exit, in the directory you launched from.
 
-## 📁 Data Storage (JSON)
+## Documentation
 
-- **categories.json** – Stores category objects (with unique ID and name).
-- **priorities.json** – Stores priority levels including the protected `"Default"`.
-- **tasks.json** – Stores task details (title, description, category, priority, due date, status).
-- **reminders.json** – Stores reminders linked to tasks by ID and type/date.
+- [`report.pdf`](report.pdf): Project report covering design decisions and assumptions
+- [`multimedia_project_guidelines.pdf`](multimedia_project_guidelines.pdf): Original assignment specification
 
----
+## Design assumptions
 
-## 🎨 GUI Overview
-
-Built with **JavaFX**, the GUI is split into two main parts:
-
-- **Top Section**: Displays aggregated task info (e.g., total tasks, completed, delayed, upcoming within 7 days).
-- **Bottom Section**: Contains tabs for:
-  - Tasks
-  - Categories
-  - Priorities
-  - Reminders
-  - Search  
-Each tab has its own controller for managing interactions.
-
----
-
-## 📌 Assumptions
-
-- The `"No Category"` and `"Default"` priority cannot be modified or removed.
-- Users cannot manually set a task as `Delayed`; it is handled automatically when the due date passes without completion.
-
----
+- The default category and the default priority always exist and cannot be changed.
+- Users cannot set Delayed themselves. The status is assigned automatically from the due date.
+- Due dates are dates only, with no time of day.
