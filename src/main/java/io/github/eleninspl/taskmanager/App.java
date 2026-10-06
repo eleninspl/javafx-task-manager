@@ -15,6 +15,7 @@ import io.github.eleninspl.taskmanager.controller.SearchController;
 import io.github.eleninspl.taskmanager.controller.TaskController;
 import javafx.application.Application;
 import javafx.application.Platform;
+import javafx.collections.ListChangeListener;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -40,6 +41,7 @@ public class App extends Application {
     private TaskService taskService;
     private ReminderService reminderService;
     private JsonStorage jsonStorage;
+    private boolean savePending;
 
     // Controllers for different parts of the app
     private TaskController taskController;
@@ -61,6 +63,7 @@ public class App extends Application {
     public void start(Stage primaryStage) {
         initServices();
         loadData();
+        enableAutoSave();
         taskService.checkOverdueTasks();
         checkForDelayedTasks();
         
@@ -112,6 +115,24 @@ public class App extends Application {
         priorityService.setPriorities(jsonStorage.loadPriorities());
         taskService.setTasks(jsonStorage.loadTasks());
         reminderService.setReminders(jsonStorage.loadReminders());
+        taskService.linkReferences(categoryService, priorityService);
+    }
+
+    // Save whenever any list changes. Changes made in the same UI event (such as a
+    // category delete that cascades to its tasks and reminders) are batched into one save.
+    private void enableAutoSave() {
+        ListChangeListener<Object> scheduleSave = change -> {
+            if (savePending) return;
+            savePending = true;
+            Platform.runLater(() -> {
+                savePending = false;
+                saveData();
+            });
+        };
+        categoryService.getCategories().addListener(scheduleSave);
+        priorityService.getPriorities().addListener(scheduleSave);
+        taskService.getTasks().addListener(scheduleSave);
+        reminderService.getReminders().addListener(scheduleSave);
     }
 
     // Save data to JSON files

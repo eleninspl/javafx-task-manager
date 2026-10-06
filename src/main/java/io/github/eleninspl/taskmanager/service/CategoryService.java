@@ -103,4 +103,16 @@ public class CategoryService {
     public Category getNoCategory() {
         return noCategory;
     }
+
+    // Map a category loaded from disk to the instance held by this service:
+    // match by ID, then by name, and fall back to "No Category"
+    public Category resolve(Category category) {
+        if (category == null) return noCategory;
+        Category byId = getCategoryById(category.getId());
+        if (byId != null) return byId;
+        return categories.stream()
+                .filter(c -> c.getName().equals(category.getName()))
+                .findFirst()
+                .orElse(noCategory);
+    }
 }

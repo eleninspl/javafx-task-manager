@@ -111,4 +111,16 @@ public class PriorityService {
                 .findFirst()
                 .orElse(null);
     }
+
+    // Map a priority loaded from disk to the instance held by this service:
+    // match by ID, then by name, and fall back to the default priority
+    public Priority resolve(Priority priority) {
+        if (priority == null) return getDefaultPriority();
+        Priority byId = getPriorityById(priority.getId());
+        if (byId != null) return byId;
+        return priorities.stream()
+                .filter(p -> p.getName() != null && p.getName().equals(priority.getName()))
+                .findFirst()
+                .orElse(getDefaultPriority());
+    }
 }

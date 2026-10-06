@@ -33,6 +33,15 @@ public class TaskService {
         tasks.setAll(loadedTasks);
     }
 
+    // Tasks loaded from JSON hold their own copies of their category and priority.
+    // Point them back at the shared instances so renames are reflected everywhere.
+    public void linkReferences(CategoryService categoryService, PriorityService priorityService) {
+        for (Task t : tasks) {
+            t.setCategory(categoryService.resolve(t.getCategory()));
+            t.setPriority(priorityService.resolve(t.getPriority()));
+        }
+    }
+
     // Add a new task to the list
     public Task addTask(Task task) {
         tasks.add(task);
