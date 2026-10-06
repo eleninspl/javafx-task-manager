@@ -20,7 +20,7 @@ MediaLab Assistant (repository: javafx-task-manager) is a local, offline task ma
 
 ## Positioning
 
-A deadline-first personal task manager that runs entirely on the user's machine. Tasks become Delayed automatically when their due date passes, and reminders are validated and recalculated against the due date. No account and no network: data is plain JSON in the user's home folder.
+A deadline-first personal task manager that runs entirely on the user's machine. Tasks become Delayed automatically when their due date passes, and reminders are validated and recalculated against the due date. No account and no network: data is plain JSON in ~/medialab.
 
 ## Operating Context
 
@@ -39,7 +39,7 @@ The original assignment's feature set and rules must all be preserved (confirmed
 - Reminders: several per task, either one day, one week or one month before the due date, or on a specific date. A reminder cannot be on a completed task, after the due date, or in the past. Reminders are recalculated when the due date changes and removed when a task becomes Completed or Delayed.
 - Search by any combination of title, category and priority.
 - Summary of total, completed, delayed, and due within 7 days.
-- Storage: JSON files in ~/.medialab-assistant, saved automatically on every change.
+- Storage: JSON files in ~/medialab (the assignment requires a folder named "medialab"), saved automatically on every change.
 - Stack: Java 17, JavaFX 21 (controls only, layouts written in code), Gson, Maven, JUnit 5.
 
 ## Brand Commitments
