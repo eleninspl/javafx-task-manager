@@ -89,3 +89,4 @@ The tests cover the service layer, search and storage: overdue detection, remind
 - The default category and the default priority always exist and cannot be changed.
 - Users cannot set Delayed themselves. The status is assigned automatically from the due date.
 - Due dates are dates only, with no time of day.
+- Data is saved after every change rather than only on exit, as the original assignment specified. This is a deliberate change, so a crash or forced quit never loses work.
