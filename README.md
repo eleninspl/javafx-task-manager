@@ -51,7 +51,7 @@ com.example
 
 ```bash
 git clone https://github.com/eleninspl/javafx-task-manager.git
-cd "javafx-task-manager/Task Managment System"
+cd javafx-task-manager
 mvn javafx:run
 ```
 
