@@ -33,6 +33,13 @@ public class CategoryController extends ManagedListController<Category> {
                 .filter(t -> t.getCategory() != null && t.getCategory().getId().equals(c.getId())).count();
     }
 
+    @Override
+    protected long openUsage(Category c) {
+        return taskService.getTasks().stream()
+                .filter(t -> t.getStatus() != io.github.eleninspl.taskmanager.model.enums.TaskStatus.COMPLETED)
+                .filter(t -> t.getCategory() != null && t.getCategory().getId().equals(c.getId())).count();
+    }
+
     @Override protected String nameError(String name, Category excluded) {
         return categoryService.nameError(name, excluded == null ? null : excluded.getId());
     }

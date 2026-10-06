@@ -204,18 +204,24 @@ public class App extends Application {
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
-        totalItem.button.setOnAction(e -> sidebar.select(Sidebar.ALL));
+        // Each count opens its view and hands focus to the list, so the count doesn't look like an active filter
+        totalItem.button.setOnAction(e -> openFromSummary(Sidebar.ALL));
         completedItem.button.setOnAction(e -> {
-            sidebar.select(Sidebar.ALL);
+            openFromSummary(Sidebar.ALL);
             taskController.revealCompleted();
         });
-        delayedItem.button.setOnAction(e -> sidebar.select(Sidebar.OVERDUE));
-        dueSoonItem.button.setOnAction(e -> sidebar.select(Sidebar.NEXT_7));
+        delayedItem.button.setOnAction(e -> openFromSummary(Sidebar.OVERDUE));
+        dueSoonItem.button.setOnAction(e -> openFromSummary(Sidebar.NEXT_7));
 
         HBox bar = new HBox(name, spacer, totalItem.button, completedItem.button, delayedItem.button, dueSoonItem.button);
         bar.setAlignment(Pos.CENTER_LEFT);
         bar.getStyleClass().add("summary-bar");
         return bar;
+    }
+
+    private void openFromSummary(String key) {
+        sidebar.select(key);
+        taskController.focusList();
     }
 
     /** Refreshes the four counts in the summary bar. */

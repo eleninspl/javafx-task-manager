@@ -344,9 +344,12 @@ public class TaskController {
             heading.setText("Nothing due in the next 7 days");
             body.setText("Tasks due from today up to a week ahead appear here.");
         } else if (query.getScope() == TaskQuery.Scope.CATEGORY && !hasAnyInScope()) {
-            heading.setText("No tasks in " + query.getCategory().getName() + " yet");
-            body.setText("Tasks you file under this category appear here.");
-            box.getChildren().add(action("New task in " + query.getCategory().getName(), true, this::newTask));
+            boolean builtIn = query.getCategory() == categoryService.getNoCategory();
+            heading.setText(builtIn ? "No uncategorized tasks" : "No tasks in " + query.getCategory().getName() + " yet");
+            body.setText(builtIn ? "Tasks without a category are filed here."
+                    : "Tasks you file under this category appear here.");
+            box.getChildren().add(action(builtIn ? "New task" : "New task in " + query.getCategory().getName(),
+                    true, this::newTask));
         } else {
             heading.setText("All done here");
             body.setText("Every task in this view is completed.");
@@ -485,12 +488,19 @@ public class TaskController {
         private Node sectionHeading(TaskQuery.Section section) {
             Label name = new Label(section.title());
             name.getStyleClass().add("section-title");
-            if (section.overdue()) name.getStyleClass().add("overdue");
             Label count = new Label(String.valueOf(section.tasks().size()));
             count.getStyleClass().add("section-count");
-            HBox box = new HBox(8, name, count);
-            box.setAlignment(Pos.BASELINE_LEFT);
-            return box;
+            HBox tab = new HBox(name, count);
+            tab.getStyleClass().add("divider-tab");
+            if (section.overdue()) {
+                tab.getStyleClass().add("overdue");
+                name.getStyleClass().add("overdue");
+            }
+            tab.setAlignment(Pos.BASELINE_LEFT);
+            tab.setMaxWidth(Region.USE_PREF_SIZE);
+            HBox row = new HBox(tab);
+            row.setStyle("-fx-padding: 0 0 0 10;");
+            return row;
         }
 
         private Node card(Task task) {

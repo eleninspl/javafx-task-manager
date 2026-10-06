@@ -10,7 +10,7 @@
     tk-card: #FFFFFF;
     tk-ink: #1E2430;
     tk-ink-2: #4A5363;
-    tk-ink-3: #636C7B;
+    tk-ink-3: #565F6E;
     tk-hairline: #D5DBE2;
     tk-control-edge: #848E9C;
     tk-accent: #2F5B9A;
@@ -40,9 +40,9 @@
 .label { -fx-text-fill: tk-ink; }
 .text-secondary { -fx-text-fill: tk-ink-2; }
 .text-tertiary { -fx-text-fill: tk-ink-3; }
-.view-title { -fx-font-size: 21px; -fx-font-weight: bold; }
+.view-title { -fx-font-size: 27px; -fx-font-weight: bold; }
 .view-subtitle { -fx-font-size: 13px; -fx-text-fill: tk-ink-2; }
-.app-name { -fx-font-size: 15px; -fx-font-weight: bold; }
+.app-name { -fx-font-size: 14px; -fx-font-weight: bold; }
 .section-label {
     -fx-font-size: 11px;
     -fx-font-weight: bold;
@@ -70,8 +70,9 @@
 .summary-item .count { -fx-font-size: 15px; -fx-font-weight: bold; }
 .summary-item .caption { -fx-text-fill: tk-ink-2; }
 .summary-item.alert .count, .summary-item.alert .caption { -fx-text-fill: tk-overdue; }
-.summary-item:focused {
-    -fx-background-color: tk-accent-soft;
+.summary-item:focus-visible {
+    -fx-background-color: tk-accent, tk-card;
+    -fx-background-insets: 0, 2;
 }
 
 /* ---------- Sidebar (drawer rail) ---------- */
@@ -95,7 +96,12 @@
 .drawer:selected { -fx-background-color: tk-card; }
 .drawer:selected .drawer-name { -fx-text-fill: tk-accent; -fx-font-weight: bold; }
 .drawer:selected .icon { -fx-stroke: tk-accent; }
-.drawer:focused { -fx-background-color: tk-accent-soft; }
+.drawer:focus-visible {
+    -fx-background-color: tk-accent, tk-rail;
+    -fx-background-insets: 0, 2;
+    -fx-background-radius: 6, 4;
+}
+.drawer:selected:focus-visible { -fx-background-color: tk-accent, tk-card; }
 .drawer .drawer-count { -fx-text-fill: tk-ink-3; -fx-font-size: 12px; }
 .drawer.alert .drawer-count { -fx-text-fill: tk-overdue; -fx-font-weight: bold; }
 
@@ -119,7 +125,8 @@
 }
 .button:hover, .toggle-button:hover { -fx-background-color: tk-control-edge, #F4F6F8; }
 .button:pressed, .toggle-button:pressed { -fx-background-color: tk-control-edge, #E9ECF0; }
-.button:focused, .toggle-button:focused {
+.button:focused, .toggle-button:focused { -fx-background-color: tk-control-edge, tk-card; -fx-background-insets: 0, 1; }
+.button:focus-visible, .toggle-button:focus-visible {
     -fx-background-color: tk-accent, tk-card;
     -fx-background-insets: 0, 2;
 }
@@ -132,7 +139,8 @@
     -fx-font-weight: bold;
 }
 .button.primary:hover { -fx-background-color: tk-accent-hover; }
-.button.primary:focused {
+.button.primary:focused { -fx-background-color: tk-accent; -fx-background-insets: 0; }
+.button.primary:focus-visible {
     -fx-background-color: tk-accent-soft, tk-accent;
     -fx-background-insets: -2, 0;
     -fx-background-radius: 8, 6;
@@ -169,6 +177,19 @@
     -fx-background-radius: 6, 5;
 }
 .combo-box-base { -fx-padding: 1 2 1 2; }
+.date-picker > .text-field {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-padding: 5 4 5 8;
+}
+.date-picker > .arrow-button { -fx-background-color: transparent; -fx-padding: 0 10 0 6; -fx-cursor: hand; }
+.date-picker > .arrow-button > .arrow {
+    -fx-shape: "M3 5h18v16H3z M5 10v9h14v-9z M7 2h2.2v5H7z M14.8 2H17v5h-2.2z";
+    -fx-background-color: tk-ink-2;
+    -fx-padding: 7;
+    -fx-scale-shape: true;
+}
+.date-picker:disabled { -fx-opacity: 0.55; }
 .text-field:focused, .text-area:focused, .combo-box-base:focused {
     -fx-background-color: tk-accent, tk-card;
     -fx-background-insets: 0, 2;
@@ -188,12 +209,12 @@
     -fx-background-radius: 4;
 }
 .check-box:selected > .box > .mark { -fx-background-color: white; }
-.check-box:focused > .box {
+.check-box:focus-visible > .box {
     -fx-background-color: tk-accent-soft, tk-accent, tk-card;
     -fx-background-insets: -3, 0, 2;
     -fx-background-radius: 6, 4, 3;
 }
-.check-box:selected:focused > .box {
+.check-box:selected:focus-visible > .box {
     -fx-background-color: tk-accent-soft, tk-accent;
     -fx-background-insets: -3, 0;
 }
@@ -211,11 +232,20 @@
     -fx-padding: 3 0 3 0;
 }
 .card-list .list-cell:empty { -fx-padding: 0; }
-.card-list .list-cell.section-cell { -fx-padding: 18 4 6 4; }
-.card-list .list-cell.first-section { -fx-padding: 4 4 6 4; }
-.section-title { -fx-font-size: 15px; -fx-font-weight: bold; }
+.card-list .list-cell.section-cell { -fx-padding: 20 0 0 0; }
+.card-list .list-cell.first-section { -fx-padding: 4 0 0 0; }
+/* Section headings are divider tabs standing up out of the drawer */
+.divider-tab {
+    -fx-background-color: tk-rail;
+    -fx-background-radius: 7 7 0 0;
+    -fx-padding: 6 12 5 12;
+    -fx-spacing: 8;
+}
+.divider-tab.overdue { -fx-background-color: tk-overdue-soft; }
+.section-title { -fx-font-size: 17px; -fx-font-weight: bold; }
 .section-title.overdue { -fx-text-fill: tk-overdue; }
 .section-count { -fx-font-size: 12px; -fx-text-fill: tk-ink-3; }
+.divider-tab.overdue .section-count { -fx-text-fill: tk-overdue; }
 
 .card {
     -fx-background-color: tk-hairline, tk-card;
@@ -249,19 +279,24 @@
     -fx-font-size: 11.5px;
     -fx-text-fill: tk-ink-2;
 }
-.clip.status { -fx-background-color: tk-accent-soft; -fx-text-fill: tk-accent; }
+.clip.status {
+    -fx-background-color: tk-hairline, tk-card;
+    -fx-background-insets: 0, 1;
+    -fx-background-radius: 4, 3;
+    -fx-text-fill: tk-ink-2;
+}
 
 /* Date-due stamp */
 .stamp {
     -fx-font-size: 12px;
     -fx-font-weight: bold;
-    -fx-text-fill: tk-accent;
-    -fx-border-color: #2F5B9A80;
+    -fx-text-fill: tk-ink-3;
+    -fx-border-color: #B9C1CB;
     -fx-border-width: 1;
     -fx-border-radius: 3;
     -fx-padding: 2 7 2 7;
 }
-.stamp.soon { -fx-text-fill: tk-ink; -fx-border-color: tk-ink-3; }
+.stamp.soon { -fx-text-fill: tk-ink; -fx-border-color: tk-ink-2; -fx-border-width: 1.5; }
 .stamp.overdue { -fx-text-fill: tk-overdue; -fx-border-color: #B4231899; -fx-background-color: tk-overdue-soft; }
 .stamp.done { -fx-text-fill: tk-ink-3; -fx-border-color: tk-hairline; }
 
@@ -305,7 +340,7 @@
     -fx-font-weight: bold;
     -fx-text-fill: tk-ink-3;
     -fx-alignment: center-left;
-    -fx-padding: 0 0 0 6;
+    -fx-padding: 0 0 0 9;
 }
 .table-row-cell {
     -fx-background-color: tk-card;

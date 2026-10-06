@@ -32,6 +32,13 @@ public class PriorityController extends ManagedListController<Priority> {
                 .filter(t -> t.getPriority() != null && t.getPriority().getId().equals(p.getId())).count();
     }
 
+    @Override
+    protected long openUsage(Priority p) {
+        return taskService.getTasks().stream()
+                .filter(t -> t.getStatus() != io.github.eleninspl.taskmanager.model.enums.TaskStatus.COMPLETED)
+                .filter(t -> t.getPriority() != null && t.getPriority().getId().equals(p.getId())).count();
+    }
+
     @Override protected String nameError(String name, Priority excluded) {
         return priorityService.nameError(name, excluded == null ? null : excluded.getId());
     }

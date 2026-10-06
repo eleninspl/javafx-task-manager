@@ -114,6 +114,9 @@ public abstract class ManagedListController<T> {
     /** @return how many tasks use the item */
     protected abstract long usage(T item);
 
+    /** @return how many unfinished tasks use the item (the number the sidebar shows) */
+    protected abstract long openUsage(T item);
+
     /** @return an error for an unusable name, or null; excluded is the item being renamed */
     protected abstract String nameError(String name, T excluded);
 
@@ -189,12 +192,17 @@ public abstract class ManagedListController<T> {
             }
             Region spacer = new Region();
             HBox.setHgrow(spacer, Priority.ALWAYS);
-            Label count = new Label(tasks(usage(item)));
+            long total = usage(item);
+            long open = openUsage(item);
+            String usageText = total == 0 ? "No tasks"
+                    : open == total ? open + " open"
+                    : open + " open \u00B7 " + (total - open) + " completed";
+            Label count = new Label(usageText);
             count.getStyleClass().add("text-tertiary");
             HBox row = new HBox(left, spacer, count);
             row.setAlignment(Pos.CENTER_LEFT);
             setGraphic(row);
-            setAccessibleText(name(item) + ", " + tasks(usage(item)) + (isBuiltIn(item) ? ", built in" : ""));
+            setAccessibleText(name(item) + ", " + usageText + (isBuiltIn(item) ? ", built in" : ""));
         }
     }
 }

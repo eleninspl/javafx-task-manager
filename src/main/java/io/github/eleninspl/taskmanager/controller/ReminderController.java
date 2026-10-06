@@ -28,6 +28,7 @@ import javafx.scene.layout.VBox;
 
 import java.time.LocalDate;
 import java.util.Comparator;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -75,12 +76,14 @@ public class ReminderController {
         TableColumn<Reminder, LocalDate> dueCol = new TableColumn<>("Task due");
         dueCol.setCellValueFactory(c -> new SimpleObjectProperty<>(task(c.getValue()).map(Task::getDueDate).orElse(null)));
         dueCol.setCellFactory(col -> dateCell());
-        table.getColumns().setAll(java.util.List.of(taskCol, typeCol, dateCol, dueCol));
-        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
-        taskCol.setMaxWidth(1f * Integer.MAX_VALUE * 40);
-        typeCol.setMaxWidth(1f * Integer.MAX_VALUE * 20);
-        dateCol.setMaxWidth(1f * Integer.MAX_VALUE * 20);
-        dueCol.setMaxWidth(1f * Integer.MAX_VALUE * 20);
+        table.getColumns().setAll(List.of(taskCol, typeCol, dateCol, dueCol));
+        // Fixed proportions, so columns don't shift between the empty and the filled table
+        double[] shares = {0.40, 0.22, 0.19, 0.19};
+        List<TableColumn<Reminder, ?>> columns = List.of(taskCol, typeCol, dateCol, dueCol);
+        for (int i = 0; i < columns.size(); i++) {
+            columns.get(i).prefWidthProperty().bind(table.widthProperty().subtract(18).multiply(shares[i]));
+            columns.get(i).setReorderable(false);
+        }
 
         SortedList<Reminder> sorted = new SortedList<>(reminderService.getReminders(),
                 Comparator.comparing(Reminder::getReminderDate));
