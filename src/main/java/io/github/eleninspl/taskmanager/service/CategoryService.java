@@ -48,9 +48,11 @@ public class CategoryService {
     public String nameError(String name, String excludeId) {
         String trimmed = name == null ? "" : name.trim();
         if (trimmed.isEmpty()) return "Enter a name.";
-        boolean taken = categories.stream()
-                .anyMatch(c -> !c.getId().equals(excludeId) && c.getName().equalsIgnoreCase(trimmed));
-        return taken ? "There is already a category called \"" + trimmed + "\"." : null;
+        return categories.stream()
+                .filter(c -> !c.getId().equals(excludeId) && c.getName().equalsIgnoreCase(trimmed))
+                .findFirst()
+                .map(c -> "There is already a category called \u201C" + c.getName() + "\u201D.")
+                .orElse(null);
     }
 
     // Add a new category with a valid, unique name

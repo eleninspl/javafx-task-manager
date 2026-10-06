@@ -1,39 +1,55 @@
 package io.github.eleninspl.taskmanager;
 
-import io.github.eleninspl.taskmanager.model.Task;
-import io.github.eleninspl.taskmanager.model.Reminder;
-import io.github.eleninspl.taskmanager.model.enums.TaskStatus;
-import io.github.eleninspl.taskmanager.service.CategoryService;
-import io.github.eleninspl.taskmanager.service.PriorityService;
-import io.github.eleninspl.taskmanager.service.ReminderService;
-import io.github.eleninspl.taskmanager.service.TaskService;
-import io.github.eleninspl.taskmanager.storage.JsonStorage;
 import io.github.eleninspl.taskmanager.controller.CategoryController;
 import io.github.eleninspl.taskmanager.controller.PriorityController;
 import io.github.eleninspl.taskmanager.controller.ReminderController;
-import io.github.eleninspl.taskmanager.controller.SearchController;
+import io.github.eleninspl.taskmanager.controller.Sidebar;
 import io.github.eleninspl.taskmanager.controller.TaskController;
+import io.github.eleninspl.taskmanager.model.Reminder;
+import io.github.eleninspl.taskmanager.model.Task;
+import io.github.eleninspl.taskmanager.model.enums.TaskStatus;
+import io.github.eleninspl.taskmanager.service.CategoryService;
+import io.github.eleninspl.taskmanager.service.DateFormats;
+import io.github.eleninspl.taskmanager.service.PriorityService;
+import io.github.eleninspl.taskmanager.service.ReminderService;
+import io.github.eleninspl.taskmanager.service.TaskQuery;
+import io.github.eleninspl.taskmanager.service.TaskService;
+import io.github.eleninspl.taskmanager.storage.JsonStorage;
+import io.github.eleninspl.taskmanager.ui.Dialogs;
+import io.github.eleninspl.taskmanager.ui.Icons;
+import io.github.eleninspl.taskmanager.ui.Theme;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.collections.ListChangeListener;
-import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.Scene;
-import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
+import javafx.scene.control.Dialog;
 import javafx.scene.control.Label;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyCodeCombination;
+import javafx.scene.input.KeyCombination;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
 import java.time.LocalDate;
-import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * MediaLab Assistant. The window has two parts, as the assignment requires: a summary bar on top
+ * (total, completed, delayed, due within 7 days) and below it the sidebar with the current view.
+ */
 public class App extends Application {
+
+    private static final String WINDOW_TITLE = "MediaLab Assistant";
 
     // Services and storage
     private CategoryService categoryService;
@@ -43,64 +59,57 @@ public class App extends Application {
     private JsonStorage jsonStorage;
     private boolean savePending;
 
-    // Controllers for different parts of the app
+    // Views
+    private Sidebar sidebar;
     private TaskController taskController;
+    private ReminderController reminderController;
     private CategoryController categoryController;
     private PriorityController priorityController;
-    private ReminderController reminderController;
-    private SearchController searchController;
+    private final BorderPane content = new BorderPane();
 
-    // UI elements for the summary panel
-    private Label totalTasksLabel;
-    private Label completedTasksLabel;
-    private Label delayedTasksLabel;
-    private Label dueIn7DaysLabel;
-
-    // Main content area to swap views
-    private BorderPane mainContent;
+    // Summary bar
+    private final SummaryItem totalItem = new SummaryItem("tasks", "task");
+    private final SummaryItem completedItem = new SummaryItem("completed", "completed");
+    private final SummaryItem delayedItem = new SummaryItem("delayed", "delayed");
+    private final SummaryItem dueSoonItem = new SummaryItem("due in 7 days", "due in 7 days");
 
     @Override
-    public void start(Stage primaryStage) {
+    public void start(Stage stage) {
         initServices();
         loadData();
         enableAutoSave();
         taskService.checkOverdueTasks();
-        checkForDelayedTasks();
-        
-        // Build UI panels
-        HBox summaryPanel = buildSummaryPanel();
-        VBox navPanel = buildNavPanel();
-        mainContent = new BorderPane();
 
-        // Initialize controllers and set default view
-        initControllers();
-        mainContent.setCenter(taskController.getView());
+        Dialogs.setOwner(stage);
+        initViews();
 
-        // Wire navigation buttons
-        wireNavigation(navPanel);
-
-        // Build overall layout
+        BorderPane body = new BorderPane();
+        body.setLeft(sidebar.getView());
+        body.setCenter(content);
         BorderPane root = new BorderPane();
-        root.setTop(summaryPanel);
-        root.setLeft(navPanel);
-        root.setCenter(mainContent);
+        root.setTop(buildSummaryBar());
+        root.setCenter(body);
 
-        Scene scene = new Scene(root, 1000, 700);
-        primaryStage.setTitle("MediaLab Assistant");
-        primaryStage.setScene(scene);
-        primaryStage.show();
+        Scene scene = new Scene(root, 1120, 740);
+        Theme.apply(scene);
+        installShortcuts(scene);
+        stage.setTitle(WINDOW_TITLE);
+        stage.setMinWidth(900);
+        stage.setMinHeight(560);
+        stage.setScene(scene);
+        stage.setOnCloseRequest(event -> saveData());
+        stage.show();
 
         updateSummary();
+        taskService.getTasks().addListener((ListChangeListener<Task>) c -> updateSummary());
+        taskController.focusList();
         showTodaysReminders();
-
-        // Save data on close
-        primaryStage.setOnCloseRequest(event -> {
-            saveData();
-            Platform.exit();
-        });
+        // The assignment asks for a popup about delayed tasks at startup; show it over the window
+        Platform.runLater(this::showDelayedTasksPopup);
     }
 
-    // Initialize services and storage
+    // ---------------------------------------------------------------- data
+
     private void initServices() {
         jsonStorage = new JsonStorage();
         categoryService = new CategoryService();
@@ -109,13 +118,19 @@ public class App extends Application {
         taskService = new TaskService(reminderService);
     }
 
-    // Load data from JSON files into services
     private void loadData() {
         categoryService.setCategories(jsonStorage.loadCategories());
         priorityService.setPriorities(jsonStorage.loadPriorities());
         taskService.setTasks(jsonStorage.loadTasks());
         reminderService.setReminders(jsonStorage.loadReminders());
         taskService.linkReferences(categoryService, priorityService);
+    }
+
+    private void saveData() {
+        jsonStorage.saveCategories(categoryService.getCategories());
+        jsonStorage.savePriorities(priorityService.getPriorities());
+        jsonStorage.saveTasks(taskService.getTasks());
+        jsonStorage.saveReminders(reminderService.getReminders());
     }
 
     // Save whenever any list changes. Changes made in the same UI event (such as a
@@ -135,123 +150,171 @@ public class App extends Application {
         reminderService.getReminders().addListener(scheduleSave);
     }
 
-    // Save data to JSON files
-    private void saveData() {
-        jsonStorage.saveCategories(categoryService.getCategories());
-        jsonStorage.savePriorities(priorityService.getPriorities());
-        jsonStorage.saveTasks(taskService.getTasks());
-        jsonStorage.saveReminders(reminderService.getReminders());
-    }
+    // ---------------------------------------------------------------- layout
 
-    // Check for delayed tasks and alert the user if any exist
-    private void checkForDelayedTasks() {
-        long delayedCount = taskService.getTasks().stream()
-                .filter(task -> task.getStatus() == TaskStatus.DELAYED)
-                .count();
-        if (delayedCount > 0) {
-            Alert alert = new Alert(Alert.AlertType.WARNING);
-            alert.setTitle("Delayed Tasks");
-            alert.setHeaderText("Attention Required");
-            alert.setContentText("You have " + delayedCount + " delayed task(s)!");
-            alert.showAndWait();
-        }
-    }
-
-    // Build the summary panel at the top
-    private HBox buildSummaryPanel() {
-        HBox summaryPanel = new HBox(20);
-        summaryPanel.setPadding(new Insets(10));
-        summaryPanel.setAlignment(Pos.CENTER);
-        totalTasksLabel = new Label();
-        completedTasksLabel = new Label();
-        delayedTasksLabel = new Label();
-        dueIn7DaysLabel = new Label();
-        summaryPanel.getChildren().addAll(totalTasksLabel, completedTasksLabel, delayedTasksLabel, dueIn7DaysLabel);
-        return summaryPanel;
-    }
-
-    // Build the navigation panel on the left
-    private VBox buildNavPanel() {
-        VBox navPanel = new VBox(10);
-        navPanel.setPadding(new Insets(10));
-        navPanel.setStyle("-fx-background-color: #F0F0F0;");
-        Button tasksBtn = new Button("Tasks");
-        Button categoriesBtn = new Button("Categories");
-        Button prioritiesBtn = new Button("Priorities");
-        Button remindersBtn = new Button("Reminders");
-        Button searchBtn = new Button("Search");
-        tasksBtn.setMaxWidth(Double.MAX_VALUE);
-        categoriesBtn.setMaxWidth(Double.MAX_VALUE);
-        prioritiesBtn.setMaxWidth(Double.MAX_VALUE);
-        remindersBtn.setMaxWidth(Double.MAX_VALUE);
-        searchBtn.setMaxWidth(Double.MAX_VALUE);
-        navPanel.getChildren().addAll(tasksBtn, categoriesBtn, prioritiesBtn, remindersBtn, searchBtn);
-
-        // Wire navigation buttons
-        tasksBtn.setOnAction(e -> mainContent.setCenter(taskController.getView()));
-        categoriesBtn.setOnAction(e -> mainContent.setCenter(categoryController.getView()));
-        prioritiesBtn.setOnAction(e -> mainContent.setCenter(priorityController.getView()));
-        remindersBtn.setOnAction(e -> mainContent.setCenter(reminderController.getView()));
-        searchBtn.setOnAction(e -> mainContent.setCenter(searchController.getView()));
-        return navPanel;
-    }
-
-    // Wire navigation buttons (if additional wiring is needed)
-    private void wireNavigation(VBox navPanel) {
-        // In this example, wiring is done inside buildNavPanel(), so this method may be extended if necessary.
-    }
-
-    // Initialize controllers
-    private void initControllers() {
-        taskController = new TaskController(taskService, categoryService, priorityService, reminderService, this);
-        categoryController = new CategoryController(categoryService, taskService, this);
-        priorityController = new PriorityController(priorityService, taskService, this);
+    private void initViews() {
         reminderController = new ReminderController(reminderService, taskService);
-        searchController = new SearchController(taskService, categoryService, priorityService);
+        taskController = new TaskController(taskService, categoryService, priorityService, reminderService,
+                task -> reminderController.openReminderDialog(null, task));
+        categoryController = new CategoryController(categoryService, taskService);
+        priorityController = new PriorityController(priorityService, taskService);
+        sidebar = new Sidebar(taskService, categoryService, reminderService, this::newTask);
+        sidebar.setOnSelect(this::show);
+        show(Sidebar.ALL);
     }
 
-    // Update summary labels with current task data
-    public void updateSummary() {
-        Collection<Task> tasks = taskService.getTasks();
-        int total = tasks.size();
-        int completed = (int) tasks.stream().filter(t -> t.getStatus() == TaskStatus.COMPLETED).count();
-        int delayed = (int) tasks.stream().filter(t -> t.getStatus() == TaskStatus.DELAYED).count();
-        int dueIn7Days = (int) tasks.stream()
-                .filter(t -> t.getDueDate() != null 
-                        && !t.getDueDate().isBefore(LocalDate.now()) 
-                        && t.getDueDate().isBefore(LocalDate.now().plusDays(7)))
-                .count();
-
-        totalTasksLabel.setText("Total Tasks: " + total);
-        completedTasksLabel.setText("Completed: " + completed);
-        delayedTasksLabel.setText("Delayed: " + delayed);
-        dueIn7DaysLabel.setText("Due in 7 Days: " + dueIn7Days);
-    }
-
-    // Show a popup with today's reminders
-    private void showTodaysReminders() {
-        LocalDate today = LocalDate.now();
-        List<Reminder> todaysReminders = reminderService.getReminders().stream()
-                .filter(r -> r.getReminderDate().equals(today))
-                .collect(Collectors.toList());
-        if (!todaysReminders.isEmpty()) {
-            StringBuilder message = new StringBuilder();
-            message.append("You have ").append(todaysReminders.size()).append(" reminder(s) for today.\n\n");
-            for (Reminder r : todaysReminders) {
-                Task task = taskService.getTasks().stream()
-                        .filter(t -> t.getId().equals(r.getTaskId()))
-                        .findFirst().orElse(null);
-                if (task != null) {
-                    message.append("Task: ").append(task.getTitle()).append("\n");
-                    message.append("Due Date: ").append(task.getDueDate() != null ? task.getDueDate().toString() : "N/A").append("\n");
-                    message.append("Reminder Type: ").append(r.getType().toString()).append("\n\n");
+    // Switch the content area to the view for a sidebar key
+    private void show(String key) {
+        switch (key) {
+            case Sidebar.REMINDERS -> content.setCenter(reminderController.getView());
+            case Sidebar.CATEGORIES -> content.setCenter(categoryController.getView());
+            case Sidebar.PRIORITIES -> content.setCenter(priorityController.getView());
+            default -> {
+                content.setCenter(taskController.getView());
+                switch (key) {
+                    case Sidebar.OVERDUE -> taskController.showScope(TaskQuery.Scope.OVERDUE, null);
+                    case Sidebar.NEXT_7 -> taskController.showScope(TaskQuery.Scope.NEXT_7_DAYS, null);
+                    case Sidebar.ALL -> taskController.showScope(TaskQuery.Scope.ALL, null);
+                    default -> taskController.showScope(TaskQuery.Scope.CATEGORY, sidebar.categoryFor(key));
                 }
             }
-            Alert alert = new Alert(Alert.AlertType.INFORMATION, message.toString(), ButtonType.OK);
-            alert.setTitle("Today's Reminders");
-            alert.setHeaderText("Reminders for " + today.toString());
-            alert.showAndWait();
         }
+    }
+
+    private boolean onTaskView() {
+        return content.getCenter() == taskController.getView();
+    }
+
+    private void newTask() {
+        if (!onTaskView()) sidebar.select(Sidebar.ALL);
+        taskController.newTask();
+    }
+
+    private void installShortcuts(Scene scene) {
+        scene.getAccelerators().put(new KeyCodeCombination(KeyCode.N, KeyCombination.SHORTCUT_DOWN), this::newTask);
+        scene.getAccelerators().put(new KeyCodeCombination(KeyCode.F, KeyCombination.SHORTCUT_DOWN), () -> {
+            if (!onTaskView()) sidebar.select(Sidebar.ALL);
+            taskController.focusSearch();
+        });
+    }
+
+    private Node buildSummaryBar() {
+        Label name = new Label(WINDOW_TITLE);
+        name.getStyleClass().add("app-name");
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+
+        totalItem.button.setOnAction(e -> sidebar.select(Sidebar.ALL));
+        completedItem.button.setOnAction(e -> {
+            sidebar.select(Sidebar.ALL);
+            taskController.revealCompleted();
+        });
+        delayedItem.button.setOnAction(e -> sidebar.select(Sidebar.OVERDUE));
+        dueSoonItem.button.setOnAction(e -> sidebar.select(Sidebar.NEXT_7));
+
+        HBox bar = new HBox(name, spacer, totalItem.button, completedItem.button, delayedItem.button, dueSoonItem.button);
+        bar.setAlignment(Pos.CENTER_LEFT);
+        bar.getStyleClass().add("summary-bar");
+        return bar;
+    }
+
+    /** Refreshes the four counts in the summary bar. */
+    public void updateSummary() {
+        totalItem.set(taskService.getTasks().size(), false);
+        completedItem.set(taskService.countWithStatus(TaskStatus.COMPLETED), false);
+        long delayed = taskService.countWithStatus(TaskStatus.DELAYED);
+        delayedItem.set(delayed, delayed > 0);
+        dueSoonItem.set(taskService.countDueWithin(7), false);
+    }
+
+    // One count in the summary bar; clicking it opens the matching drawer
+    private static final class SummaryItem {
+        final Button button = new Button();
+        final Label count = new Label();
+        final Label caption = new Label();
+        final String plural;
+        final String singular;
+
+        SummaryItem(String plural, String singular) {
+            this.plural = plural;
+            this.singular = singular;
+            count.getStyleClass().add("count");
+            caption.getStyleClass().add("caption");
+            HBox box = new HBox(6, count, caption);
+            box.setAlignment(Pos.BASELINE_LEFT);
+            button.setGraphic(box);
+            button.getStyleClass().setAll("summary-item");
+        }
+
+        void set(long n, boolean alert) {
+            count.setText(String.valueOf(n));
+            caption.setText(n == 1 ? singular : plural);
+            button.setAccessibleText(n + " " + caption.getText());
+            button.getStyleClass().remove("alert");
+            if (alert) button.getStyleClass().add("alert");
+        }
+    }
+
+    // ---------------------------------------------------------------- startup notices
+
+    // Popup required by the assignment: how many tasks are delayed, which ones, and a way to review them
+    private void showDelayedTasksPopup() {
+        List<Task> delayed = taskService.getTasks().stream()
+                .filter(t -> t.getStatus() == TaskStatus.DELAYED)
+                .sorted((a, b) -> a.getDueDate().compareTo(b.getDueDate()))
+                .collect(Collectors.toList());
+        if (delayed.isEmpty()) return;
+
+        Dialog<ButtonType> dialog = new Dialog<>();
+        String heading = delayed.size() == 1 ? "1 task is overdue" : delayed.size() + " tasks are overdue";
+        dialog.setTitle(heading);
+        dialog.setHeaderText(heading);
+        VBox list = new VBox(6);
+        delayed.stream().limit(5).forEach(t -> {
+            Label title = new Label(t.getTitle());
+            title.setStyle("-fx-font-weight: bold;");
+            Label due = new Label("was due " + DateFormats.relative(t.getDueDate()));
+            due.getStyleClass().add("error-text");
+            HBox row = new HBox(8, title, due);
+            row.setAlignment(Pos.BASELINE_LEFT);
+            list.getChildren().add(row);
+        });
+        if (delayed.size() > 5) {
+            Label more = new Label("and " + (delayed.size() - 5) + " more");
+            more.getStyleClass().add("hint");
+            list.getChildren().add(more);
+        }
+        Label explain = new Label(delayed.size() == 1
+                ? "It has been marked Delayed. Give it a new due date or mark it completed."
+                : "They have been marked Delayed. Give them new due dates or mark them completed.");
+        explain.getStyleClass().add("text-secondary");
+        explain.setWrapText(true);
+        VBox box = new VBox(14, list, explain);
+        box.setPrefWidth(420);
+        dialog.getDialogPane().setContent(box);
+
+        ButtonType review = new ButtonType("Review overdue", ButtonBar.ButtonData.OK_DONE);
+        ButtonType later = new ButtonType("Later", ButtonBar.ButtonData.CANCEL_CLOSE);
+        dialog.getDialogPane().getButtonTypes().addAll(later, review);
+        Dialogs.prepare(dialog);
+        dialog.getDialogPane().lookupButton(review).getStyleClass().add("primary");
+        dialog.showAndWait().filter(b -> b == review).ifPresent(b -> sidebar.select(Sidebar.OVERDUE));
+    }
+
+    // Today's reminders appear as a banner above the task list instead of interrupting
+    private void showTodaysReminders() {
+        LocalDate today = LocalDate.now();
+        List<String> titles = reminderService.getReminders().stream()
+                .filter(r -> today.equals(r.getReminderDate()))
+                .map(Reminder::getTaskId)
+                .distinct()
+                .map(id -> taskService.getTasks().stream().filter(t -> t.getId().equals(id)).findFirst().orElse(null))
+                .filter(t -> t != null)
+                .map(t -> t.getTitle() + " (due " + DateFormats.relative(t.getDueDate()) + ")")
+                .collect(Collectors.toList());
+        if (titles.isEmpty()) return;
+        String lead = titles.size() == 1 ? "Reminder for today: " : "Reminders for today: ";
+        taskController.showBanner(lead + String.join(", ", titles), Icons.BELL);
     }
 
     public static void main(String[] args) {

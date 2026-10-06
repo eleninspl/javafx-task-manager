@@ -6,127 +6,141 @@ import io.github.eleninspl.taskmanager.model.Task;
 import io.github.eleninspl.taskmanager.model.enums.TaskStatus;
 import io.github.eleninspl.taskmanager.service.CategoryService;
 import io.github.eleninspl.taskmanager.service.PriorityService;
-import javafx.beans.binding.Bindings;
+import io.github.eleninspl.taskmanager.ui.Dialogs;
+import javafx.application.Platform;
 import javafx.collections.FXCollections;
-import javafx.scene.control.*;
-import javafx.scene.layout.GridPane;
-import javafx.util.Callback;
+import javafx.scene.control.Button;
+import javafx.scene.control.ButtonBar;
+import javafx.scene.control.ButtonType;
+import javafx.scene.control.ComboBox;
+import javafx.scene.control.DatePicker;
+import javafx.scene.control.Dialog;
+import javafx.scene.control.Label;
+import javafx.scene.control.TextArea;
+import javafx.scene.control.TextField;
+import javafx.scene.layout.VBox;
+
 import java.time.LocalDate;
 
+/**
+ * Create or edit a task. Delayed is never offered as a choice: it is assigned automatically
+ * when the due date has passed and the task is not completed.
+ */
 public class TaskDialog extends Dialog<Task> {
 
-    private TextField titleField;      // Field for task title
-    private TextField descField;       // Field for task description
-    private ComboBox<Category> categoryCombo; // ComboBox for category selection
-    private ComboBox<Priority> priorityCombo; // ComboBox for priority selection
-    private DatePicker dueDatePicker;  // DatePicker for due date
-    private ComboBox<TaskStatus> statusCombo; // ComboBox for task status
+    private final TextField titleField = new TextField();
+    private final TextArea notesArea = new TextArea();
+    private final ComboBox<Category> categoryCombo;
+    private final ComboBox<Priority> priorityCombo;
+    private final DatePicker dueDatePicker = new DatePicker();
+    private final ComboBox<TaskStatus> statusCombo = new ComboBox<>(FXCollections.observableArrayList(
+            TaskStatus.OPEN, TaskStatus.IN_PROGRESS, TaskStatus.POSTPONED, TaskStatus.COMPLETED));
+    private final Label hint = new Label();
+    private final Task existingTask;
 
-    public TaskDialog(Task existingTask, CategoryService categoryService, PriorityService priorityService) {
-        // Set dialog title and add OK/Cancel buttons
-        setTitle("Task Dialog");
-        ButtonType okBtn = new ButtonType("OK", ButtonBar.ButtonData.OK_DONE);
-        ButtonType cancelBtn = new ButtonType("Cancel", ButtonBar.ButtonData.CANCEL_CLOSE);
-        getDialogPane().getButtonTypes().addAll(okBtn, cancelBtn);
+    /**
+     * @param existingTask    the task to edit, or null to create one
+     * @param presetCategory  category to preselect for a new task, or null for "No Category"
+     * @param categoryService source of categories
+     * @param priorityService source of priorities
+     */
+    public TaskDialog(Task existingTask, Category presetCategory,
+                      CategoryService categoryService, PriorityService priorityService) {
+        this.existingTask = existingTask;
+        boolean editing = existingTask != null;
+        setTitle(editing ? "Edit task" : "New task");
+        setHeaderText(editing ? "Edit task" : "New task");
 
-        // Create grid layout for input fields
-        GridPane grid = new GridPane();
-        grid.setHgap(10);
-        grid.setVgap(10);
+        ButtonType save = new ButtonType(editing ? "Save changes" : "Add task", ButtonBar.ButtonData.OK_DONE);
+        getDialogPane().getButtonTypes().addAll(ButtonType.CANCEL, save);
 
-        // Initialize fields with prompt text
-        titleField = new TextField();
-        titleField.setPromptText("Title");
-
-        descField = new TextField();
-        descField.setPromptText("Description");
-
+        titleField.setPromptText("What needs doing?");
+        notesArea.setPromptText("Optional details");
+        notesArea.setPrefRowCount(3);
+        notesArea.setWrapText(true);
         categoryCombo = new ComboBox<>(categoryService.getCategories());
-        categoryCombo.setPromptText("Select Category");
-
         priorityCombo = new ComboBox<>(priorityService.getPriorities());
-        priorityCombo.setPromptText("Select Priority");
+        Forms.commitTypedDates(dueDatePicker);
+        hint.setWrapText(true);
+        hint.getStyleClass().add("hint");
 
-        dueDatePicker = new DatePicker();
-        dueDatePicker.setPromptText("Due Date");
+        VBox form = new VBox(14,
+                Forms.field("_Title", titleField),
+                Forms.field("_Notes", notesArea),
+                Forms.row(Forms.field("_Category", categoryCombo), Forms.field("_Priority", priorityCombo)),
+                Forms.row(Forms.field("_Due date", dueDatePicker), Forms.field("_Status", statusCombo)),
+                hint);
+        form.setPrefWidth(460);
+        getDialogPane().setContent(form);
 
-        // Allow selection of status; DELAYED is computed so it's not available here
-        statusCombo = new ComboBox<>(FXCollections.observableArrayList(
-            TaskStatus.OPEN, TaskStatus.IN_PROGRESS, TaskStatus.POSTPONED, TaskStatus.COMPLETED
-        ));
-        statusCombo.setPromptText("Select Status");
-
-        // Add labels and controls to the grid
-        grid.add(new Label("Title:"), 0, 0);
-        grid.add(titleField, 1, 0);
-        grid.add(new Label("Description:"), 0, 1);
-        grid.add(descField, 1, 1);
-        grid.add(new Label("Category:"), 0, 2);
-        grid.add(categoryCombo, 1, 2);
-        grid.add(new Label("Priority:"), 0, 3);
-        grid.add(priorityCombo, 1, 3);
-        grid.add(new Label("Due Date:"), 0, 4);
-        grid.add(dueDatePicker, 1, 4);
-        grid.add(new Label("Status:"), 0, 5);
-        grid.add(statusCombo, 1, 5);
-
-        getDialogPane().setContent(grid);
-
-        // If editing, pre-fill the fields with existing task data
-        if (existingTask != null) {
+        if (editing) {
             titleField.setText(existingTask.getTitle());
-            descField.setText(existingTask.getDescription());
-            categoryCombo.setValue(existingTask.getCategory());
-            priorityCombo.setValue(existingTask.getPriority());
+            notesArea.setText(existingTask.getDescription());
+            categoryCombo.setValue(categoryService.resolve(existingTask.getCategory()));
+            priorityCombo.setValue(priorityService.resolve(existingTask.getPriority()));
             dueDatePicker.setValue(existingTask.getDueDate());
-            // Prepopulate status if it is one of the allowed options
-            if (existingTask.getStatus() == TaskStatus.OPEN ||
-                existingTask.getStatus() == TaskStatus.IN_PROGRESS ||
-                existingTask.getStatus() == TaskStatus.POSTPONED ||
-                existingTask.getStatus() == TaskStatus.COMPLETED) {
+            if (existingTask.getStatus() == TaskStatus.DELAYED) {
+                statusCombo.setPromptText("Delayed (automatic)");
+            } else {
                 statusCombo.setValue(existingTask.getStatus());
             }
+        } else {
+            categoryCombo.setValue(presetCategory != null ? presetCategory : categoryService.getNoCategory());
+            priorityCombo.setValue(priorityService.getDefaultPriority());
+            statusCombo.setValue(TaskStatus.OPEN);
         }
 
-        // Disable OK button if title is empty or due date not selected
-        Button okButton = (Button) getDialogPane().lookupButton(okBtn);
-        okButton.disableProperty().bind(Bindings.createBooleanBinding(() ->
-            titleField.getText().trim().isEmpty() || dueDatePicker.getValue() == null,
-            titleField.textProperty(), dueDatePicker.valueProperty()
-        ));
+        Button saveButton = (Button) getDialogPane().lookupButton(save);
+        saveButton.getStyleClass().add("primary");
+        Runnable validate = () -> {
+            boolean missing = titleField.getText().isBlank() || dueDatePicker.getValue() == null;
+            saveButton.setDisable(missing);
+            updateHint(missing);
+        };
+        titleField.textProperty().addListener((o, a, b) -> validate.run());
+        dueDatePicker.valueProperty().addListener((o, a, b) -> validate.run());
+        statusCombo.valueProperty().addListener((o, a, b) -> validate.run());
+        validate.run();
 
-        // Convert dialog result when OK is clicked; compute task status based on due date
-        setResultConverter(new Callback<ButtonType, Task>() {
-            @Override
-            public Task call(ButtonType b) {
-                if (b == okBtn) {
-                    LocalDate dueDate = dueDatePicker.getValue();
-                    TaskStatus status;
-                    // If task is overdue, force status to DELAYED; otherwise, use chosen status or default to OPEN
-                    if (statusCombo.getValue() == TaskStatus.COMPLETED) {
-                        status = TaskStatus.COMPLETED;
-                    }
-                    else if (dueDate.isBefore(LocalDate.now())) {
-                        status = TaskStatus.DELAYED;
-                    } else {
-                        status = (statusCombo.getValue() != null) ? statusCombo.getValue() : TaskStatus.OPEN;
-                    }
-                    // Use default category/priority if not selected
-                    Category category = (categoryCombo.getValue() != null)
-                        ? categoryCombo.getValue() : categoryService.getNoCategory();
-                    Priority priority = (priorityCombo.getValue() != null)
-                        ? priorityCombo.getValue() : priorityService.getDefaultPriority();
-                    return new Task(
-                        titleField.getText().trim(),
-                        descField.getText().trim(),
-                        category,
-                        priority,
-                        dueDate,
-                        status
-                    );
-                }
-                return null;
-            }
+        setResultConverter(button -> {
+            if (button != save) return null;
+            LocalDate dueDate = dueDatePicker.getValue();
+            TaskStatus status = resolveStatus(dueDate);
+            Category category = categoryCombo.getValue() != null ? categoryCombo.getValue() : categoryService.getNoCategory();
+            Priority priority = priorityCombo.getValue() != null ? priorityCombo.getValue() : priorityService.getDefaultPriority();
+            String title = titleField.getText().trim();
+            String notes = notesArea.getText() == null ? "" : notesArea.getText().trim();
+            return editing
+                    ? new Task(existingTask.getId(), title, notes, category, priority, dueDate, status)
+                    : new Task(title, notes, category, priority, dueDate, status);
         });
+
+        Dialogs.prepare(this);
+        setOnShown(e -> Platform.runLater(titleField::requestFocus));
+    }
+
+    // Completed always wins; otherwise a past due date means Delayed; otherwise the chosen status
+    private TaskStatus resolveStatus(LocalDate dueDate) {
+        if (statusCombo.getValue() == TaskStatus.COMPLETED) return TaskStatus.COMPLETED;
+        if (dueDate.isBefore(LocalDate.now())) return TaskStatus.DELAYED;
+        return statusCombo.getValue() != null ? statusCombo.getValue() : TaskStatus.OPEN;
+    }
+
+    private void updateHint(boolean missing) {
+        hint.getStyleClass().remove("error-text");
+        LocalDate due = dueDatePicker.getValue();
+        if (missing) {
+            hint.setText("Add a title and a due date to save.");
+        } else if (due.isBefore(LocalDate.now()) && statusCombo.getValue() != TaskStatus.COMPLETED) {
+            hint.setText("This date has already passed, so the task will be marked Delayed.");
+            hint.getStyleClass().add("error-text");
+        } else if (existingTask != null && existingTask.getStatus() == TaskStatus.DELAYED) {
+            hint.setText("With a future due date this task is no longer Delayed.");
+        } else if (statusCombo.getValue() == TaskStatus.COMPLETED) {
+            hint.setText("Completing a task removes its reminders.");
+        } else {
+            hint.setText("");
+        }
+        hint.setManaged(!hint.getText().isEmpty());
     }
 }

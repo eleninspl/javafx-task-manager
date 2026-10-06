@@ -1,118 +1,129 @@
 package io.github.eleninspl.taskmanager.controller.dialog;
 
 import io.github.eleninspl.taskmanager.model.Reminder;
-import io.github.eleninspl.taskmanager.model.enums.ReminderType;
 import io.github.eleninspl.taskmanager.model.Task;
+import io.github.eleninspl.taskmanager.model.enums.ReminderType;
+import io.github.eleninspl.taskmanager.service.DateFormats;
+import io.github.eleninspl.taskmanager.service.ReminderService;
+import io.github.eleninspl.taskmanager.ui.Dialogs;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import javafx.geometry.Insets;
+import javafx.scene.control.Button;
 import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.DatePicker;
 import javafx.scene.control.Dialog;
 import javafx.scene.control.Label;
-import javafx.scene.Node;
-import javafx.scene.layout.GridPane;
-import javafx.util.Callback;
+import javafx.scene.control.ListCell;
+import javafx.scene.layout.VBox;
+
 import java.time.LocalDate;
 
-public class ReminderDialog extends Dialog<Reminder> {
+/**
+ * Create or edit a reminder. The resulting date is previewed live, and rule violations
+ * (completed task, date after the due date, date in the past) are explained before saving.
+ */
+public class ReminderDialog extends Dialog<ReminderDialog.Draft> {
 
-    private ComboBox<Task> taskCombo;            // ComboBox for selecting a task
-    private ComboBox<ReminderType> typeCombo;      // ComboBox for selecting reminder type
-    private DatePicker specificDatePicker;         // DatePicker for a specific date
+    /**
+     * What the user chose.
+     *
+     * @param task         the task to remind about
+     * @param type         when to remind
+     * @param specificDate the date, for SPECIFIC_DATE reminders; null otherwise
+     */
+    public record Draft(Task task, ReminderType type, LocalDate specificDate) {}
 
-    public ReminderDialog(ObservableList<Task> tasks, Reminder existingReminder) {
-        // Set dialog title based on create or edit mode
-        setTitle(existingReminder == null ? "New Reminder" : "Edit Reminder");
+    private final ComboBox<Task> taskCombo;
+    private final ComboBox<ReminderType> typeCombo = new ComboBox<>(FXCollections.observableArrayList(ReminderType.values()));
+    private final DatePicker datePicker = new DatePicker();
+    private final Label preview = new Label();
 
-        // Add OK and Cancel buttons
-        ButtonType okButtonType = new ButtonType("OK", ButtonBar.ButtonData.OK_DONE);
-        ButtonType cancelButtonType = new ButtonType("Cancel", ButtonBar.ButtonData.CANCEL_CLOSE);
-        getDialogPane().getButtonTypes().addAll(okButtonType, cancelButtonType);
+    /**
+     * @param tasks           tasks that can have reminders (not completed or delayed)
+     * @param existing        the reminder to edit, or null to create one
+     * @param presetTask      task to preselect for a new reminder, or null
+     * @param reminderService validates the choice
+     */
+    public ReminderDialog(ObservableList<Task> tasks, Reminder existing, Task presetTask, ReminderService reminderService) {
+        boolean editing = existing != null;
+        setTitle(editing ? "Edit reminder" : "New reminder");
+        setHeaderText(editing ? "Edit reminder" : "New reminder");
+        ButtonType save = new ButtonType(editing ? "Save changes" : "Add reminder", ButtonBar.ButtonData.OK_DONE);
+        getDialogPane().getButtonTypes().addAll(ButtonType.CANCEL, save);
 
-        // Create grid layout for fields
-        GridPane grid = new GridPane();
-        grid.setHgap(10);
-        grid.setVgap(10);
-        grid.setPadding(new Insets(10));
-
-        // Initialize ComboBox for tasks and set prompt text
         taskCombo = new ComboBox<>(tasks);
-        taskCombo.setPromptText("Select Task");
+        taskCombo.setPromptText("Choose a task");
+        taskCombo.setCellFactory(list -> new TaskCell());
+        taskCombo.setButtonCell(new TaskCell());
+        typeCombo.setPromptText("Choose when");
+        Forms.commitTypedDates(datePicker);
+        preview.setWrapText(true);
 
-        // Initialize ComboBox for reminder type and populate with types
-        typeCombo = new ComboBox<>(FXCollections.observableArrayList(
-            ReminderType.ONE_DAY_BEFORE,
-            ReminderType.ONE_WEEK_BEFORE,
-            ReminderType.ONE_MONTH_BEFORE,
-            ReminderType.SPECIFIC_DATE
-        ));
-        typeCombo.setPromptText("Select Reminder Type");
+        VBox form = new VBox(14,
+                Forms.field("_Task", taskCombo),
+                Forms.row(Forms.field("_Remind me", typeCombo), Forms.field("_On date", datePicker)),
+                preview);
+        form.setPrefWidth(460);
+        getDialogPane().setContent(form);
 
-        // Initialize DatePicker for specific date, disable by default
-        specificDatePicker = new DatePicker();
-        specificDatePicker.setPromptText("Specific Date");
-        specificDatePicker.setDisable(true);
-
-        // Add listener to enable/disable DatePicker based on type selection
-        typeCombo.valueProperty().addListener((obs, oldVal, newVal) -> {
-            if (newVal == ReminderType.SPECIFIC_DATE) {
-                specificDatePicker.setDisable(false);
-            } else {
-                specificDatePicker.setDisable(true);
-                specificDatePicker.setValue(null);
-            }
-        });
-
-        // Add labels and controls to the grid
-        grid.add(new Label("Task:"), 0, 0);
-        grid.add(taskCombo, 1, 0);
-        grid.add(new Label("Reminder Type:"), 0, 1);
-        grid.add(typeCombo, 1, 1);
-        grid.add(new Label("Specific Date:"), 0, 2);
-        grid.add(specificDatePicker, 1, 2);
-        getDialogPane().setContent(grid);
-
-        // Pre-fill fields if editing an existing reminder
-        if (existingReminder != null) {
-            for (Task t : tasks) {
-                if (t.getId().equals(existingReminder.getTaskId())) {
-                    taskCombo.setValue(t);
-                    break;
-                }
-            }
-            typeCombo.setValue(existingReminder.getType());
-            specificDatePicker.setValue(existingReminder.getReminderDate());
-            // Enable DatePicker if type is SPECIFIC_DATE
-            specificDatePicker.setDisable(existingReminder.getType() != ReminderType.SPECIFIC_DATE);
+        if (editing) {
+            tasks.stream().filter(t -> t.getId().equals(existing.getTaskId())).findFirst().ifPresent(taskCombo::setValue);
+            typeCombo.setValue(existing.getType());
+            if (existing.getType() == ReminderType.SPECIFIC_DATE) datePicker.setValue(existing.getReminderDate());
+        } else {
+            if (presetTask != null && tasks.contains(presetTask)) taskCombo.setValue(presetTask);
+            typeCombo.setValue(ReminderType.ONE_DAY_BEFORE);
         }
 
-        // Disable OK button if required fields are missing
-        Node okButton = getDialogPane().lookupButton(okButtonType);
-        okButton.disableProperty().bind(
-            taskCombo.valueProperty().isNull()
-            .or(typeCombo.valueProperty().isNull())
-            .or(
-                typeCombo.valueProperty().isEqualTo(ReminderType.SPECIFIC_DATE)
-                .and(specificDatePicker.valueProperty().isNull())
-            )
-        );
-
-        // When OK is clicked, create a new Reminder object
-        // If the type is not SPECIFIC_DATE, reminderDate will be null (and will be computed by the service)
-        setResultConverter(new Callback<ButtonType, Reminder>() {
-            @Override
-            public Reminder call(ButtonType b) {
-                if (b == okButtonType) {
-                    Task selectedTask = taskCombo.getValue();
-                    ReminderType type = typeCombo.getValue();
-                    LocalDate date = (type == ReminderType.SPECIFIC_DATE) ? specificDatePicker.getValue() : null;
-                    return new Reminder(selectedTask.getId(), type, date);
-                }
-                return null;
+        Button saveButton = (Button) getDialogPane().lookupButton(save);
+        saveButton.getStyleClass().add("primary");
+        Runnable validate = () -> {
+            boolean specific = typeCombo.getValue() == ReminderType.SPECIFIC_DATE;
+            datePicker.setDisable(!specific);
+            if (!specific) datePicker.setValue(null);
+            String error = reminderService.validationError(taskCombo.getValue(), typeCombo.getValue(), datePicker.getValue());
+            saveButton.setDisable(error != null);
+            preview.getStyleClass().removeAll("error-text", "hint");
+            if (error == null) {
+                preview.setText("You'll be reminded on " + DateFormats.full(previewDate()) + ".");
+                preview.getStyleClass().add("hint");
+            } else {
+                preview.setText(error);
+                // Missing choices are guidance, rule violations are errors
+                boolean incomplete = taskCombo.getValue() == null || (specific && datePicker.getValue() == null);
+                preview.getStyleClass().add(incomplete ? "hint" : "error-text");
             }
-        });
+        };
+        taskCombo.valueProperty().addListener((o, a, b) -> validate.run());
+        typeCombo.valueProperty().addListener((o, a, b) -> validate.run());
+        datePicker.valueProperty().addListener((o, a, b) -> validate.run());
+        validate.run();
+
+        setResultConverter(button -> button == save
+                ? new Draft(taskCombo.getValue(), typeCombo.getValue(), datePicker.getValue())
+                : null);
+        Dialogs.prepare(this);
+    }
+
+    private LocalDate previewDate() {
+        LocalDate due = taskCombo.getValue().getDueDate();
+        return switch (typeCombo.getValue()) {
+            case ONE_DAY_BEFORE -> due.minusDays(1);
+            case ONE_WEEK_BEFORE -> due.minusWeeks(1);
+            case ONE_MONTH_BEFORE -> due.minusMonths(1);
+            case SPECIFIC_DATE -> datePicker.getValue();
+        };
+    }
+
+    // Shows "Title · due Fri 9 Oct" so the deadline is visible while choosing
+    private static class TaskCell extends ListCell<Task> {
+        @Override
+        protected void updateItem(Task task, boolean empty) {
+            super.updateItem(task, empty);
+            setText(empty || task == null ? null
+                    : task.getTitle() + "  ·  due " + DateFormats.relative(task.getDueDate()));
+        }
     }
 }

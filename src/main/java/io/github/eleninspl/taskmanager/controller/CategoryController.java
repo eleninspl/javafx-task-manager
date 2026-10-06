@@ -3,123 +3,51 @@ package io.github.eleninspl.taskmanager.controller;
 import io.github.eleninspl.taskmanager.model.Category;
 import io.github.eleninspl.taskmanager.service.CategoryService;
 import io.github.eleninspl.taskmanager.service.TaskService;
-import io.github.eleninspl.taskmanager.App;
-import io.github.eleninspl.taskmanager.controller.dialog.CategoryDialog;
-import javafx.geometry.Insets;
-import javafx.scene.control.Alert;
-import javafx.scene.control.Button;
-import javafx.scene.control.ButtonType;
-import javafx.scene.control.ListView;
-import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.HBox;
-import java.util.Optional;
 
-public class CategoryController {
+/**
+ * Manage categories. Deleting a category deletes its tasks and their reminders;
+ * "No Category" is built in.
+ */
+public class CategoryController extends ManagedListController<Category> {
 
-    private CategoryService categoryService;  
-    private TaskService taskService;          
-    private App app;                         
-    private BorderPane view;                  
-    private ListView<Category> categoryList;  
-    private Button newBtn, editBtn, deleteBtn;  
+    private final CategoryService categoryService;
+    private final TaskService taskService;
 
-    public CategoryController(CategoryService categoryService, TaskService taskService, App app) {
+    /**
+     * @param categoryService categories
+     * @param taskService     tasks, for usage counts and cascading deletes
+     */
+    public CategoryController(CategoryService categoryService, TaskService taskService) {
+        super("Categories", "category", "categories", categoryService.getCategories(), taskService.getTasks());
         this.categoryService = categoryService;
         this.taskService = taskService;
-        this.app = app;
-        createView();
+        start();
     }
 
-    public BorderPane getView() {
-        return view;
+    @Override protected String name(Category c) { return c.getName(); }
+    @Override protected boolean isBuiltIn(Category c) { return c == categoryService.getNoCategory(); }
+
+    @Override
+    protected long usage(Category c) {
+        return taskService.getTasks().stream()
+                .filter(t -> t.getCategory() != null && t.getCategory().getId().equals(c.getId())).count();
     }
 
-    // Build the main view for category management
-    private void createView() {
-        view = new BorderPane();
-        view.setPadding(new Insets(10));
+    @Override protected String nameError(String name, Category excluded) {
+        return categoryService.nameError(name, excluded == null ? null : excluded.getId());
+    }
+    @Override protected void create(String name) { categoryService.addCategory(name); }
+    @Override protected void rename(Category c, String name) { categoryService.updateCategory(c.getId(), name, taskService); }
+    @Override protected void remove(Category c) { categoryService.deleteCategory(c.getId(), taskService); }
 
-        // Create list view with categories for management (excluding default)
-        categoryList = new ListView<>(categoryService.getCategoriesForManagement());
-        view.setCenter(categoryList);
-
-        // Create buttons for new, edit, and delete
-        newBtn = new Button("New Category");
-        editBtn = new Button("Edit Category");
-        deleteBtn = new Button("Delete Category");
-
-        newBtn.setOnAction(e -> openCategoryDialog(null));
-        editBtn.setOnAction(e -> handleEditCategory());
-        deleteBtn.setOnAction(e -> handleDeleteCategory());
-
-        HBox buttonBox = new HBox(10, newBtn, editBtn, deleteBtn);
-        buttonBox.setPadding(new Insets(10));
-        view.setBottom(buttonBox);
+    @Override
+    protected String deleteConsequence(Category c, long usage) {
+        return usage == 0 ? "The category is empty, so no tasks are affected."
+                : "Its " + tasks(usage) + " and their reminders will be deleted too. This can't be undone.";
     }
 
-    // Handle editing a category
-    private void handleEditCategory() {
-        Category selected = getSelectedCategory();
-        if (selected == null) {
-            showInfoAlert("Please select a category to edit.");
-            return;
-        }
-        openCategoryDialog(selected);
-    }
-
-    // Handle deleting a category
-    private void handleDeleteCategory() {
-        Category selected = getSelectedCategory();
-        if (selected == null) {
-            showInfoAlert("Please select a category to delete.");
-            return;
-        }
-        if (confirmAction("Warning: Delete Category",
-                "Deleting this category will remove all its tasks.",
-                "Do you really want to delete this category?")) {
-            categoryService.deleteCategory(selected.getId(), taskService);
-            categoryList.refresh();
-            app.updateSummary();
-        }
-    }
-
-    // Returns the currently selected category (or null if none)
-    private Category getSelectedCategory() {
-        return categoryList.getSelectionModel().getSelectedItem();
-    }
-
-    // Open dialog for creating or editing a category
-    private void openCategoryDialog(Category selected) {
-        CategoryDialog dialog = new CategoryDialog(selected);
-        dialog.setTitle(selected == null ? "New Category" : "Edit Category");
-        dialog.showAndWait().ifPresent(resultCat -> {
-            if (selected == null) {
-                categoryService.addCategory(resultCat.getName());
-            } else {
-                if (confirmAction("Warning: Rename Category",
-                        "Renaming this category will update its tasks.",
-                        "Do you want to continue?")) {
-                    categoryService.updateCategory(selected.getId(), resultCat.getName(), taskService);
-                }
-            }
-            categoryList.refresh();
-            app.updateSummary();
-        });
-    }
-
-    // Helper: Show an informational alert with a message
-    private void showInfoAlert(String message) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION, message, ButtonType.OK);
-        alert.showAndWait();
-    }
-
-    // Helper: Show a confirmation alert and return true if the user confirms
-    private boolean confirmAction(String title, String header, String content) {
-        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-        alert.setTitle(title);
-        alert.setHeaderText(header);
-        alert.setContentText(content);
-        Optional<ButtonType> result = alert.showAndWait();
-        return result.isPresent() && result.get() == ButtonType.OK;
+    @Override
+    protected String builtInNote() {
+        return "“No Category” holds tasks without a category. Deleting a category also deletes its tasks.";
     }
 }

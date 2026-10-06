@@ -28,7 +28,8 @@ public class JsonStorage {
     private final Path directory;
     private final Gson gson; // Gson instance for JSON conversion
 
-    // Store data in the directory given by -Dmedialab.dataDir, or ~/.medialab-assistant by default
+    // Store data in the directory given by -Dmedialab.dataDir, or ~/medialab by default
+    // (the assignment requires the data folder to be named "medialab")
     public JsonStorage() {
         this(defaultDirectory());
     }
@@ -47,7 +48,7 @@ public class JsonStorage {
         if (override != null && !override.isBlank()) {
             return Paths.get(override);
         }
-        return Paths.get(System.getProperty("user.home"), ".medialab-assistant");
+        return Paths.get(System.getProperty("user.home"), "medialab");
     }
 
     public Path getDirectory() {

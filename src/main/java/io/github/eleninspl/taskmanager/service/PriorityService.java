@@ -50,9 +50,11 @@ public class PriorityService {
     public String nameError(String name, String excludeId) {
         String trimmed = name == null ? "" : name.trim();
         if (trimmed.isEmpty()) return "Enter a name.";
-        boolean taken = priorities.stream()
-                .anyMatch(p -> !p.getId().equals(excludeId) && p.getName() != null && p.getName().equalsIgnoreCase(trimmed));
-        return taken ? "There is already a priority called \"" + trimmed + "\"." : null;
+        return priorities.stream()
+                .filter(p -> !p.getId().equals(excludeId) && p.getName() != null && p.getName().equalsIgnoreCase(trimmed))
+                .findFirst()
+                .map(p -> "There is already a priority called \u201C" + p.getName() + "\u201D.")
+                .orElse(null);
     }
 
     // Add a new priority with a valid, unique name

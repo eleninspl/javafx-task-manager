@@ -1,177 +1,196 @@
 package io.github.eleninspl.taskmanager.controller;
 
+import io.github.eleninspl.taskmanager.controller.dialog.ReminderDialog;
 import io.github.eleninspl.taskmanager.model.Reminder;
 import io.github.eleninspl.taskmanager.model.Task;
-import io.github.eleninspl.taskmanager.model.enums.TaskStatus;
+import io.github.eleninspl.taskmanager.service.DateFormats;
 import io.github.eleninspl.taskmanager.service.ReminderService;
+import io.github.eleninspl.taskmanager.service.TaskQuery;
 import io.github.eleninspl.taskmanager.service.TaskService;
-import io.github.eleninspl.taskmanager.controller.dialog.ReminderDialog;
-import javafx.collections.transformation.FilteredList;
-import javafx.geometry.Insets;
-import javafx.scene.control.Alert;
-import javafx.scene.control.Button;
-import javafx.scene.control.ButtonType;
-import javafx.scene.control.TableColumn;
-import javafx.scene.control.TableView;
-import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.HBox;
+import io.github.eleninspl.taskmanager.ui.Dialogs;
+import io.github.eleninspl.taskmanager.ui.Icons;
+import javafx.beans.InvalidationListener;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
+import javafx.collections.transformation.FilteredList;
+import javafx.collections.transformation.SortedList;
+import javafx.scene.Node;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableRow;
+import javafx.scene.control.TableView;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.MouseButton;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
+
+import java.time.LocalDate;
+import java.util.Comparator;
 import java.util.Optional;
 
+/**
+ * Lists every active reminder, soonest first, and lets the user add, edit and delete them.
+ */
 public class ReminderController {
 
-    private ReminderService reminderService; // Handles reminder logic
-    private TaskService taskService;         // Provides access to tasks
-    private BorderPane view;                 // Main container for reminder UI
-    private TableView<Reminder> reminderTable; // Table showing reminders
-    private Button newBtn, editBtn, deleteBtn; // Buttons for operations
+    private final ReminderService reminderService;
+    private final TaskService taskService;
+    private final FilteredList<Task> remindableTasks;
+    private final TableView<Reminder> table = new TableView<>();
+    private final Label subtitle = new Label();
+    private final VBox view;
 
+    /**
+     * @param reminderService reminders
+     * @param taskService     tasks the reminders belong to
+     */
     public ReminderController(ReminderService reminderService, TaskService taskService) {
         this.reminderService = reminderService;
         this.taskService = taskService;
-        createView(); // Build the UI
+        // Completed and overdue tasks can't take new reminders
+        this.remindableTasks = new FilteredList<>(taskService.getTasks(),
+                t -> t.getStatus() != io.github.eleninspl.taskmanager.model.enums.TaskStatus.COMPLETED && !TaskQuery.isOverdue(t));
+
+        Button add = new Button("New reminder", Icons.icon(Icons.PLUS, 14));
+        add.getStyleClass().add("primary");
+        add.setOnAction(e -> openReminderDialog(null, null));
+        Button edit = new Button("Edit");
+        edit.setOnAction(e -> edit());
+        Button delete = new Button("Delete");
+        delete.setOnAction(e -> delete());
+        edit.disableProperty().bind(table.getSelectionModel().selectedItemProperty().isNull());
+        delete.disableProperty().bind(table.getSelectionModel().selectedItemProperty().isNull());
+
+        Node header = ViewHeader.create(new Label("Reminders"), subtitle, edit, delete, add);
+
+        TableColumn<Reminder, String> taskCol = new TableColumn<>("Task");
+        taskCol.setCellValueFactory(c -> new SimpleStringProperty(task(c.getValue()).map(Task::getTitle).orElse("")));
+        TableColumn<Reminder, String> typeCol = new TableColumn<>("Remind me");
+        typeCol.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().getType().toString()));
+        TableColumn<Reminder, LocalDate> dateCol = new TableColumn<>("On");
+        dateCol.setCellValueFactory(c -> new SimpleObjectProperty<>(c.getValue().getReminderDate()));
+        dateCol.setCellFactory(col -> dateCell());
+        TableColumn<Reminder, LocalDate> dueCol = new TableColumn<>("Task due");
+        dueCol.setCellValueFactory(c -> new SimpleObjectProperty<>(task(c.getValue()).map(Task::getDueDate).orElse(null)));
+        dueCol.setCellFactory(col -> dateCell());
+        table.getColumns().setAll(java.util.List.of(taskCol, typeCol, dateCol, dueCol));
+        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
+        taskCol.setMaxWidth(1f * Integer.MAX_VALUE * 40);
+        typeCol.setMaxWidth(1f * Integer.MAX_VALUE * 20);
+        dateCol.setMaxWidth(1f * Integer.MAX_VALUE * 20);
+        dueCol.setMaxWidth(1f * Integer.MAX_VALUE * 20);
+
+        SortedList<Reminder> sorted = new SortedList<>(reminderService.getReminders(),
+                Comparator.comparing(Reminder::getReminderDate));
+        table.setItems(sorted);
+        table.setRowFactory(tv -> {
+            TableRow<Reminder> row = new TableRow<>();
+            row.setOnMouseClicked(e -> {
+                if (e.getButton() == MouseButton.PRIMARY && e.getClickCount() == 2 && !row.isEmpty()) edit();
+            });
+            return row;
+        });
+        table.setOnKeyPressed(e -> {
+            if (e.getCode() == KeyCode.ENTER) edit();
+            if (e.getCode() == KeyCode.DELETE || e.getCode() == KeyCode.BACK_SPACE) delete();
+        });
+        table.setPlaceholder(emptyState());
+
+        StackPane panel = new StackPane(table);
+        panel.getStyleClass().add("panel");
+        VBox.setVgrow(panel, Priority.ALWAYS);
+        view = new VBox(16, header, panel);
+        view.setStyle("-fx-padding: 22 20 20 20;");
+
+        InvalidationListener update = obs -> {
+            long count = reminderService.getReminders().size();
+            subtitle.setText(count == 0 ? "None set" : count == 1 ? "1 reminder" : count + " reminders");
+            table.refresh();
+        };
+        reminderService.getReminders().addListener(update);
+        taskService.getTasks().addListener(update);
+        update.invalidated(null);
     }
 
-    public BorderPane getView() {
+    /** @return the view's root node */
+    public Node getView() {
         return view;
     }
 
-    // Build UI components for reminder management
-    private void createView() {
-        view = new BorderPane();
-        view.setPadding(new Insets(10));
-        
-        createReminderTable();
-        createButtonBox();
-    }
-
-    // Build and set up the table for reminders
-    private void createReminderTable() {
-        reminderTable = new TableView<>();
-        reminderTable.setItems(reminderService.getReminders());
-        reminderTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
-        reminderTable.getColumns().add(createTaskColumn());
-        reminderTable.getColumns().add(createTypeColumn());
-        reminderTable.getColumns().add(createDateColumn());
-        view.setCenter(reminderTable);
-    }
-
-    // Create the "Task" column
-    private TableColumn<Reminder, String> createTaskColumn() {
-        TableColumn<Reminder, String> taskCol = new TableColumn<>("Task");
-        taskCol.setCellValueFactory(cellData -> {
-            Task task = taskService.getTasks().stream()
-                    .filter(t -> t.getId().equals(cellData.getValue().getTaskId()))
-                    .findFirst().orElse(null);
-            return new SimpleStringProperty(task == null ? "Unknown" : task.getTitle());
-        });
-        return taskCol;
-    }
-
-    // Create the "Type" column
-    private TableColumn<Reminder, String> createTypeColumn() {
-        TableColumn<Reminder, String> typeCol = new TableColumn<>("Type");
-        typeCol.setCellValueFactory(cellData ->
-            new SimpleStringProperty(cellData.getValue().getType().toString())
-        );
-        return typeCol;
-    }
-
-    // Create the "Reminder Date" column
-    private TableColumn<Reminder, String> createDateColumn() {
-        TableColumn<Reminder, String> dateCol = new TableColumn<>("Reminder Date");
-        dateCol.setCellValueFactory(cellData ->
-            new SimpleStringProperty(cellData.getValue().getReminderDate() != null ?
-                cellData.getValue().getReminderDate().toString() : "Computed by service")
-        );
-        return dateCol;
-    }
-
-    // Build the button box and attach action handlers
-    private void createButtonBox() {
-        newBtn = new Button("New Reminder");
-        editBtn = new Button("Edit Reminder");
-        deleteBtn = new Button("Delete Reminder");
-
-        newBtn.setOnAction(e -> openReminderDialog(null));
-        editBtn.setOnAction(e -> handleEditReminder());
-        deleteBtn.setOnAction(e -> handleDeleteReminder());
-
-        HBox buttonBox = new HBox(10, newBtn, editBtn, deleteBtn);
-        buttonBox.setPadding(new Insets(10));
-        view.setBottom(buttonBox);
-    }
-
-    // Returns the currently selected reminder (or null if none is selected)
-    private Reminder getSelectedReminder() {
-        return reminderTable.getSelectionModel().getSelectedItem();
-    }
-
-    // Handle editing a reminder: show alert if none is selected
-    private void handleEditReminder() {
-        Reminder selected = getSelectedReminder();
-        if (selected == null) {
-            showInfoAlert("Please select a reminder to edit.");
+    /**
+     * Opens the reminder dialog and saves the result.
+     *
+     * @param existing   reminder to edit, or null to create one
+     * @param presetTask task to preselect for a new reminder, or null
+     */
+    public void openReminderDialog(Reminder existing, Task presetTask) {
+        if (existing == null && remindableTasks.isEmpty()) {
+            Dialogs.info("No tasks can take a reminder",
+                    "Reminders need a task that isn't completed or overdue. Add a task with a future due date first.");
             return;
         }
-        openReminderDialog(selected);
+        new ReminderDialog(remindableTasks, existing, presetTask, reminderService)
+                .showAndWait()
+                .ifPresent(draft -> {
+                    try {
+                        if (existing == null) {
+                            reminderService.createReminderForTask(draft.task(), draft.type(), draft.specificDate());
+                        } else {
+                            reminderService.updateReminderForTask(existing.getId(), draft.task(), draft.type(), draft.specificDate());
+                        }
+                    } catch (IllegalArgumentException ex) {
+                        Dialogs.info("The reminder wasn't saved", ex.getMessage());
+                    }
+                });
     }
 
-    // Handle deleting a reminder: show alert if none is selected
-    private void handleDeleteReminder() {
-        Reminder selected = getSelectedReminder();
-        if (selected == null) {
-            showInfoAlert("Please select a reminder to delete.");
-            return;
-        }
-        Optional<ButtonType> result = showConfirmation("Delete Reminder", "Are you sure you want to delete this reminder?");
-        if (result.isPresent() && result.get() == ButtonType.OK) {
+    private void edit() {
+        Reminder selected = table.getSelectionModel().getSelectedItem();
+        if (selected != null) openReminderDialog(selected, null);
+    }
+
+    private void delete() {
+        Reminder selected = table.getSelectionModel().getSelectedItem();
+        if (selected == null) return;
+        String taskTitle = task(selected).map(Task::getTitle).orElse("this task");
+        if (Dialogs.confirm("Delete this reminder?",
+                "The " + selected.getType().toString().toLowerCase() + " reminder for “" + taskTitle
+                        + "” on " + DateFormats.full(selected.getReminderDate()) + " will be deleted.",
+                "Delete reminder")) {
             reminderService.deleteReminder(selected.getId());
         }
     }
 
-    // Open dialog for creating or editing a reminder
-    private void openReminderDialog(Reminder existingReminder) {
-        // Filter tasks to include only active tasks (not COMPLETED or DELAYED)
-        FilteredList<Task> activeTasks = new FilteredList<>(taskService.getTasks(),
-                t -> t.getStatus() != TaskStatus.COMPLETED && t.getStatus() != TaskStatus.DELAYED);
-        ReminderDialog dialog = new ReminderDialog(activeTasks, existingReminder);
-        Optional<Reminder> result = dialog.showAndWait();
-        result.ifPresent(partialReminder -> {
-            // Find the task associated with the reminder
-            Task task = activeTasks.stream()
-                    .filter(t -> t.getId().equals(partialReminder.getTaskId()))
-                    .findFirst().orElse(null);
-            if (task == null) {
-                showErrorAlert("Selected task not found.");
-                return;
+    private Optional<Task> task(Reminder reminder) {
+        return taskService.getTasks().stream().filter(t -> t.getId().equals(reminder.getTaskId())).findFirst();
+    }
+
+    private static javafx.scene.control.TableCell<Reminder, LocalDate> dateCell() {
+        javafx.scene.control.TableCell<Reminder, LocalDate> cell = new javafx.scene.control.TableCell<>() {
+            @Override
+            protected void updateItem(LocalDate date, boolean empty) {
+                super.updateItem(date, empty);
+                setText(empty || date == null ? null : DateFormats.relative(date));
             }
-            try {
-                reminderService.createReminderForTask(task, partialReminder.getType(), partialReminder.getReminderDate());
-            } catch (IllegalArgumentException ex) {
-                showErrorAlert(ex.getMessage());
-            }
-        });
+        };
+        cell.getStyleClass().add("date-cell");
+        return cell;
     }
 
-    // Helper: Show an information alert with the provided message
-    private void showInfoAlert(String message) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION, message, ButtonType.OK);
-        alert.showAndWait();
-    }
-
-    // Helper: Show an error alert with the provided message
-    private void showErrorAlert(String message) {
-        Alert alert = new Alert(Alert.AlertType.ERROR, message, ButtonType.OK);
-        alert.showAndWait();
-    }
-
-    // Helper: Show a confirmation dialog and return the user's response
-    private Optional<ButtonType> showConfirmation(String title, String content) {
-        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.setContentText(content);
-        return alert.showAndWait();
+    private Node emptyState() {
+        Label heading = new Label("No reminders");
+        heading.getStyleClass().add("empty-title");
+        Label body = new Label("Set a reminder a day, a week or a month before a task is due, or on a date you choose.");
+        body.getStyleClass().add("empty-body");
+        body.setMaxWidth(380);
+        Button add = new Button("New reminder");
+        add.getStyleClass().add("primary");
+        add.setOnAction(e -> openReminderDialog(null, null));
+        VBox box = new VBox(heading, body, add);
+        box.getStyleClass().add("empty-state");
+        VBox.setMargin(add, new javafx.geometry.Insets(8, 0, 0, 0));
+        return box;
     }
 }

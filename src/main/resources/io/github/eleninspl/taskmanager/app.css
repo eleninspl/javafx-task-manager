@@ -1,0 +1,367 @@
+/*
+ * MediaLab Assistant: "Tickler File" theme.
+ * White index cards on a steel-grey drawer. One accent (index-card rule blue) marks
+ * what you can act on or have selected; red is reserved for overdue work.
+ */
+
+.root {
+    tk-ground: #ECEFF2;
+    tk-rail: #E2E6EB;
+    tk-card: #FFFFFF;
+    tk-ink: #1E2430;
+    tk-ink-2: #4A5363;
+    tk-ink-3: #636C7B;
+    tk-hairline: #D5DBE2;
+    tk-control-edge: #848E9C;
+    tk-accent: #2F5B9A;
+    tk-accent-hover: #264C82;
+    tk-accent-soft: #E3EBF6;
+    tk-overdue: #B42318;
+    tk-overdue-soft: #FBEAE8;
+
+    -fx-font-size: 13px;
+    -fx-base: #F6F7F9;
+    -fx-background: tk-ground;
+    -fx-control-inner-background: tk-card;
+    -fx-accent: tk-accent;
+    -fx-focus-color: tk-accent;
+    -fx-faint-focus-color: #2F5B9A26;
+    -fx-text-base-color: tk-ink;
+    -fx-text-background-color: tk-ink;
+    -fx-text-inner-color: tk-ink;
+    -fx-selection-bar: tk-accent-soft;
+    -fx-selection-bar-non-focused: tk-accent-soft;
+    -fx-selection-bar-text: tk-ink;
+    -fx-background-color: tk-ground;
+}
+
+/* ---------- Type ---------- */
+
+.label { -fx-text-fill: tk-ink; }
+.text-secondary { -fx-text-fill: tk-ink-2; }
+.text-tertiary { -fx-text-fill: tk-ink-3; }
+.view-title { -fx-font-size: 21px; -fx-font-weight: bold; }
+.view-subtitle { -fx-font-size: 13px; -fx-text-fill: tk-ink-2; }
+.app-name { -fx-font-size: 15px; -fx-font-weight: bold; }
+.section-label {
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-text-fill: tk-ink-3;
+}
+.field-label { -fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: tk-ink-2; }
+.hint { -fx-font-size: 12px; -fx-text-fill: tk-ink-3; }
+.error-text { -fx-font-size: 12px; -fx-text-fill: tk-overdue; }
+
+/* ---------- Summary bar (top area) ---------- */
+
+.summary-bar {
+    -fx-background-color: tk-card;
+    -fx-border-color: transparent transparent tk-hairline transparent;
+    -fx-padding: 10 20 10 20;
+    -fx-spacing: 4;
+}
+.summary-item {
+    -fx-background-color: transparent;
+    -fx-background-radius: 6;
+    -fx-padding: 5 10 5 10;
+    -fx-cursor: hand;
+}
+.summary-item:hover { -fx-background-color: tk-ground; }
+.summary-item .count { -fx-font-size: 15px; -fx-font-weight: bold; }
+.summary-item .caption { -fx-text-fill: tk-ink-2; }
+.summary-item.alert .count, .summary-item.alert .caption { -fx-text-fill: tk-overdue; }
+.summary-item:focused {
+    -fx-background-color: tk-accent-soft;
+}
+
+/* ---------- Sidebar (drawer rail) ---------- */
+
+.sidebar {
+    -fx-background-color: tk-rail;
+    -fx-padding: 16 10 16 10;
+    -fx-spacing: 2;
+    -fx-pref-width: 230;
+    -fx-min-width: 200;
+}
+.sidebar .section-label { -fx-padding: 16 10 6 10; }
+.drawer {
+    -fx-background-color: transparent;
+    -fx-background-radius: 6;
+    -fx-padding: 6 10 6 10;
+    -fx-alignment: center-left;
+    -fx-cursor: hand;
+}
+.drawer:hover { -fx-background-color: #D8DDE4; }
+.drawer:selected { -fx-background-color: tk-card; }
+.drawer:selected .drawer-name { -fx-text-fill: tk-accent; -fx-font-weight: bold; }
+.drawer:selected .icon { -fx-stroke: tk-accent; }
+.drawer:focused { -fx-background-color: tk-accent-soft; }
+.drawer .drawer-count { -fx-text-fill: tk-ink-3; -fx-font-size: 12px; }
+.drawer.alert .drawer-count { -fx-text-fill: tk-overdue; -fx-font-weight: bold; }
+
+.icon {
+    -fx-stroke: tk-ink-2;
+    -fx-stroke-width: 1.8;
+    -fx-fill: transparent;
+    -fx-stroke-line-cap: round;
+    -fx-stroke-line-join: round;
+}
+
+/* ---------- Buttons ---------- */
+
+.button, .toggle-button {
+    -fx-background-color: tk-control-edge, tk-card;
+    -fx-background-insets: 0, 1;
+    -fx-background-radius: 6, 5;
+    -fx-padding: 6 12 6 12;
+    -fx-text-fill: tk-ink;
+    -fx-cursor: hand;
+}
+.button:hover, .toggle-button:hover { -fx-background-color: tk-control-edge, #F4F6F8; }
+.button:pressed, .toggle-button:pressed { -fx-background-color: tk-control-edge, #E9ECF0; }
+.button:focused, .toggle-button:focused {
+    -fx-background-color: tk-accent, tk-card;
+    -fx-background-insets: 0, 2;
+}
+.button:disabled { -fx-opacity: 0.45; }
+.button.primary {
+    -fx-background-color: tk-accent;
+    -fx-background-insets: 0;
+    -fx-background-radius: 6;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+}
+.button.primary:hover { -fx-background-color: tk-accent-hover; }
+.button.primary:focused {
+    -fx-background-color: tk-accent-soft, tk-accent;
+    -fx-background-insets: -2, 0;
+    -fx-background-radius: 8, 6;
+}
+.button.primary .icon { -fx-stroke: white; }
+.button.danger { -fx-text-fill: tk-overdue; }
+.button.quiet {
+    -fx-background-color: transparent;
+    -fx-padding: 4;
+}
+.button.quiet:hover { -fx-background-color: #00000010; }
+
+/* Segmented "group by" control */
+.segmented .toggle-button { -fx-padding: 5 10 5 10; }
+.segmented .toggle-button:selected {
+    -fx-background-color: tk-accent, tk-accent-soft;
+    -fx-text-fill: tk-accent;
+    -fx-font-weight: bold;
+}
+.segmented .left-pill { -fx-background-radius: 6 0 0 6, 5 0 0 5; }
+.segmented .right-pill { -fx-background-radius: 0 6 6 0, 0 5 5 0; }
+
+/* ---------- Inputs ---------- */
+
+.text-field, .text-area, .combo-box, .date-picker > .text-field {
+    -fx-prompt-text-fill: tk-ink-3;
+}
+.text-field, .text-area .content {
+    -fx-background-color: tk-card;
+}
+.text-field, .text-area, .combo-box-base {
+    -fx-background-color: tk-control-edge, tk-card;
+    -fx-background-insets: 0, 1;
+    -fx-background-radius: 6, 5;
+}
+.combo-box-base { -fx-padding: 1 2 1 2; }
+.text-field:focused, .text-area:focused, .combo-box-base:focused {
+    -fx-background-color: tk-accent, tk-card;
+    -fx-background-insets: 0, 2;
+}
+.text-area .content { -fx-background-radius: 5; }
+.search-field { -fx-padding: 6 8 6 30; }
+.check-box { -fx-text-fill: tk-ink; }
+.check-box > .box {
+    -fx-background-color: tk-control-edge, tk-card;
+    -fx-background-insets: 0, 1.5;
+    -fx-background-radius: 4, 3;
+    -fx-padding: 3;
+}
+.check-box:selected > .box {
+    -fx-background-color: tk-accent;
+    -fx-background-insets: 0;
+    -fx-background-radius: 4;
+}
+.check-box:selected > .box > .mark { -fx-background-color: white; }
+.check-box:focused > .box {
+    -fx-background-color: tk-accent-soft, tk-accent, tk-card;
+    -fx-background-insets: -3, 0, 2;
+    -fx-background-radius: 6, 4, 3;
+}
+.check-box:selected:focused > .box {
+    -fx-background-color: tk-accent-soft, tk-accent;
+    -fx-background-insets: -3, 0;
+}
+
+/* ---------- Task list (the drawer of cards) ---------- */
+
+.card-list, .card-list > .virtual-flow > .clipped-container > .sheet {
+    -fx-background-color: tk-ground;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+}
+.card-list { -fx-padding: 0 20 20 20; }
+.card-list .list-cell {
+    -fx-background-color: transparent;
+    -fx-padding: 3 0 3 0;
+}
+.card-list .list-cell:empty { -fx-padding: 0; }
+.card-list .list-cell.section-cell { -fx-padding: 18 4 6 4; }
+.card-list .list-cell.first-section { -fx-padding: 4 4 6 4; }
+.section-title { -fx-font-size: 15px; -fx-font-weight: bold; }
+.section-title.overdue { -fx-text-fill: tk-overdue; }
+.section-count { -fx-font-size: 12px; -fx-text-fill: tk-ink-3; }
+
+.card {
+    -fx-background-color: tk-hairline, tk-card;
+    -fx-background-insets: 0, 1;
+    -fx-background-radius: 7, 6;
+    -fx-padding: 11 14 11 12;
+    -fx-spacing: 12;
+    -fx-effect: dropshadow(gaussian, #1E243014, 6, 0, 0, 1);
+}
+.card:hover { -fx-background-color: #BCC4CE, tk-card; }
+.list-cell:selected .card {
+    -fx-background-color: tk-accent, tk-card;
+    -fx-background-insets: 0, 1.5;
+}
+.card.overdue { -fx-background-color: #EBC3BE, tk-card; }
+.list-cell:selected .card.overdue { -fx-background-color: tk-accent, tk-card; }
+.card.completed { -fx-background-color: tk-hairline, #F7F8FA; -fx-effect: null; }
+.card-title { -fx-font-size: 14px; -fx-font-weight: bold; }
+.card.completed .card-title { -fx-text-fill: tk-ink-3; -fx-font-weight: normal; }
+.card.completed .card-title .text { -fx-strikethrough: true; }
+.card-note { -fx-text-fill: tk-ink-2; }
+.meta { -fx-font-size: 12px; -fx-text-fill: tk-ink-2; }
+.meta-strong { -fx-font-size: 12px; -fx-text-fill: tk-overdue; }
+.meta .icon, .meta-icon { -fx-stroke: tk-ink-3; -fx-stroke-width: 1.6; }
+
+/* Priority clip and status chip */
+.clip {
+    -fx-background-color: tk-ground;
+    -fx-background-radius: 4;
+    -fx-padding: 1 6 1 6;
+    -fx-font-size: 11.5px;
+    -fx-text-fill: tk-ink-2;
+}
+.clip.status { -fx-background-color: tk-accent-soft; -fx-text-fill: tk-accent; }
+
+/* Date-due stamp */
+.stamp {
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-text-fill: tk-accent;
+    -fx-border-color: #2F5B9A80;
+    -fx-border-width: 1;
+    -fx-border-radius: 3;
+    -fx-padding: 2 7 2 7;
+}
+.stamp.soon { -fx-text-fill: tk-ink; -fx-border-color: tk-ink-3; }
+.stamp.overdue { -fx-text-fill: tk-overdue; -fx-border-color: #B4231899; -fx-background-color: tk-overdue-soft; }
+.stamp.done { -fx-text-fill: tk-ink-3; -fx-border-color: tk-hairline; }
+
+/* ---------- Banners ---------- */
+
+.banner {
+    -fx-background-color: tk-accent-soft;
+    -fx-background-radius: 7;
+    -fx-padding: 10 12 10 14;
+    -fx-spacing: 10;
+    -fx-alignment: center-left;
+}
+.banner .icon { -fx-stroke: tk-accent; }
+
+/* ---------- Empty states ---------- */
+
+.empty-state { -fx-spacing: 8; -fx-padding: 48 24 48 24; -fx-alignment: center; }
+.empty-title { -fx-font-size: 17px; -fx-font-weight: bold; }
+.empty-body { -fx-text-fill: tk-ink-2; -fx-wrap-text: true; -fx-text-alignment: center; }
+
+/* ---------- Management tables and lists ---------- */
+
+.panel {
+    -fx-background-color: tk-hairline, tk-card;
+    -fx-background-insets: 0, 1;
+    -fx-background-radius: 7, 6;
+    -fx-padding: 1;
+}
+.table-view, .list-view.plain {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+}
+.table-view .column-header-background { -fx-background-color: tk-card; }
+.table-view .column-header, .table-view .filler {
+    -fx-background-color: tk-card;
+    -fx-border-color: transparent transparent tk-hairline transparent;
+    -fx-size: 34;
+}
+.table-view .column-header .label {
+    -fx-font-size: 11.5px;
+    -fx-font-weight: bold;
+    -fx-text-fill: tk-ink-3;
+    -fx-alignment: center-left;
+    -fx-padding: 0 0 0 6;
+}
+.table-row-cell {
+    -fx-background-color: tk-card;
+    -fx-border-color: transparent transparent #EEF1F4 transparent;
+    -fx-cell-size: 40;
+}
+.table-row-cell:empty { -fx-border-color: transparent; }
+.table-row-cell:selected { -fx-background-color: tk-accent-soft; }
+.table-row-cell .table-cell {
+    -fx-text-fill: tk-ink;
+    -fx-padding: 0 6 0 12;
+    -fx-alignment: center-left;
+    -fx-border-color: transparent;
+}
+.table-view .column-header { -fx-border-width: 0 0 1 0; }
+.table-row-cell .table-cell.date-cell { -fx-text-fill: tk-ink-2; }
+.list-view.plain .list-cell {
+    -fx-background-color: tk-card;
+    -fx-border-color: transparent transparent #EEF1F4 transparent;
+    -fx-padding: 10 14 10 14;
+}
+.list-view.plain .list-cell:selected { -fx-background-color: tk-accent-soft; }
+.list-view.plain .list-cell:empty { -fx-border-color: transparent; }
+
+/* ---------- Dialogs ---------- */
+
+.dialog-pane {
+    -fx-background-color: tk-card;
+    -fx-padding: 0;
+}
+.dialog-pane > .header-panel {
+    -fx-background-color: tk-card;
+    -fx-padding: 20 24 4 24;
+    -fx-border-color: transparent;
+}
+.dialog-pane > .header-panel .label { -fx-font-size: 17px; -fx-font-weight: bold; }
+.dialog-pane > .content { -fx-padding: 12 24 8 24; }
+.dialog-pane > .content.label { -fx-text-fill: tk-ink-2; -fx-wrap-text: true; }
+.dialog-pane > .button-bar > .container { -fx-padding: 12 24 20 24; }
+.dialog-pane .header-panel .graphic-container { -fx-padding: 0; }
+
+/* ---------- Scrollbars and tooltips ---------- */
+
+.scroll-bar { -fx-background-color: transparent; }
+.scroll-bar .thumb { -fx-background-color: #00000026; -fx-background-radius: 4; -fx-background-insets: 3; }
+.scroll-bar .thumb:hover { -fx-background-color: #00000040; }
+.scroll-bar .increment-button, .scroll-bar .decrement-button { -fx-padding: 0; -fx-pref-height: 0; -fx-pref-width: 0; }
+.scroll-bar .increment-arrow, .scroll-bar .decrement-arrow { -fx-shape: " "; -fx-padding: 0; }
+.tooltip {
+    -fx-background-color: tk-ink;
+    -fx-background-radius: 5;
+    -fx-text-fill: white;
+    -fx-font-size: 12px;
+    -fx-padding: 5 8 5 8;
+}
+.context-menu { -fx-background-color: tk-hairline, tk-card; -fx-background-insets: 0, 1; -fx-background-radius: 7; -fx-padding: 4; }
+.context-menu .menu-item:focused { -fx-background-color: tk-accent-soft; -fx-background-radius: 4; }
+.context-menu .menu-item:focused .label { -fx-text-fill: tk-ink; }
+.context-menu .menu-item.danger .label { -fx-text-fill: tk-overdue; }
