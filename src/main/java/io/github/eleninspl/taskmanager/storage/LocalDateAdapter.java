@@ -1,4 +1,4 @@
-package com.example.storage;
+package io.github.eleninspl.taskmanager.storage;
 
 import com.google.gson.TypeAdapter;
 import com.google.gson.stream.JsonReader;

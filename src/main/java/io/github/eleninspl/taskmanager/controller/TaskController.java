@@ -1,13 +1,13 @@
-package com.example.controller;
+package io.github.eleninspl.taskmanager.controller;
 
-import com.example.model.Category;
-import com.example.model.Task;
-import com.example.service.CategoryService;
-import com.example.service.PriorityService;
-import com.example.service.ReminderService;
-import com.example.service.TaskService;
-import com.example.App;
-import com.example.controller.dialog.TaskDialog;
+import io.github.eleninspl.taskmanager.model.Category;
+import io.github.eleninspl.taskmanager.model.Task;
+import io.github.eleninspl.taskmanager.service.CategoryService;
+import io.github.eleninspl.taskmanager.service.PriorityService;
+import io.github.eleninspl.taskmanager.service.ReminderService;
+import io.github.eleninspl.taskmanager.service.TaskService;
+import io.github.eleninspl.taskmanager.App;
+import io.github.eleninspl.taskmanager.controller.dialog.TaskDialog;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;

@@ -1,8 +1,8 @@
-package com.example.controller.dialog;
+package io.github.eleninspl.taskmanager.controller.dialog;
 
-import com.example.model.Reminder;
-import com.example.model.enums.ReminderType;
-import com.example.model.Task;
+import io.github.eleninspl.taskmanager.model.Reminder;
+import io.github.eleninspl.taskmanager.model.enums.ReminderType;
+import io.github.eleninspl.taskmanager.model.Task;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;

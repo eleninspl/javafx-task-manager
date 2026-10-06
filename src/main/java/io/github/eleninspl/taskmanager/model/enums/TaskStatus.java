@@ -1,4 +1,4 @@
-package com.example.model.enums;
+package io.github.eleninspl.taskmanager.model.enums;
 
 // Enum representing the possible statuses of a task
 public enum TaskStatus {

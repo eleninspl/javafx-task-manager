@@ -1,6 +1,6 @@
-package com.example.controller.dialog;
+package io.github.eleninspl.taskmanager.controller.dialog;
 
-import com.example.model.Category;
+import io.github.eleninspl.taskmanager.model.Category;
 import javafx.scene.control.*;
 import javafx.scene.layout.GridPane;
 import javafx.util.Callback;

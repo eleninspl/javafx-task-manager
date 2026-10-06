@@ -1,10 +1,10 @@
-package com.example.controller;
+package io.github.eleninspl.taskmanager.controller;
 
-import com.example.model.Priority;
-import com.example.service.PriorityService;
-import com.example.service.TaskService;
-import com.example.App;
-import com.example.controller.dialog.PriorityDialog;
+import io.github.eleninspl.taskmanager.model.Priority;
+import io.github.eleninspl.taskmanager.service.PriorityService;
+import io.github.eleninspl.taskmanager.service.TaskService;
+import io.github.eleninspl.taskmanager.App;
+import io.github.eleninspl.taskmanager.controller.dialog.PriorityDialog;
 import javafx.geometry.Insets;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;

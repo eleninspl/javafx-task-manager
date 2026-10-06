@@ -1,11 +1,11 @@
-package com.example.controller;
+package io.github.eleninspl.taskmanager.controller;
 
-import com.example.model.Reminder;
-import com.example.model.Task;
-import com.example.model.enums.TaskStatus;
-import com.example.service.ReminderService;
-import com.example.service.TaskService;
-import com.example.controller.dialog.ReminderDialog;
+import io.github.eleninspl.taskmanager.model.Reminder;
+import io.github.eleninspl.taskmanager.model.Task;
+import io.github.eleninspl.taskmanager.model.enums.TaskStatus;
+import io.github.eleninspl.taskmanager.service.ReminderService;
+import io.github.eleninspl.taskmanager.service.TaskService;
+import io.github.eleninspl.taskmanager.controller.dialog.ReminderDialog;
 import javafx.collections.transformation.FilteredList;
 import javafx.geometry.Insets;
 import javafx.scene.control.Alert;

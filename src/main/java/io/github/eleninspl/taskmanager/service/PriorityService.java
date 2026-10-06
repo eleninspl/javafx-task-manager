@@ -1,6 +1,6 @@
-package com.example.service;
+package io.github.eleninspl.taskmanager.service;
 
-import com.example.model.Priority;
+import io.github.eleninspl.taskmanager.model.Priority;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import java.util.Collection;

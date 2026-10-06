@@ -1,4 +1,4 @@
-package com.example.model;
+package io.github.eleninspl.taskmanager.model;
 
 import java.util.UUID;
 

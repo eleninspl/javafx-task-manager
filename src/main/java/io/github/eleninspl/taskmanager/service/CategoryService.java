@@ -1,6 +1,6 @@
-package com.example.service;
+package io.github.eleninspl.taskmanager.service;
 
-import com.example.model.Category;
+import io.github.eleninspl.taskmanager.model.Category;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import java.util.Collection;

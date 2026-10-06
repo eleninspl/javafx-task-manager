@@ -1,9 +1,9 @@
-package com.example.storage;
+package io.github.eleninspl.taskmanager.storage;
 
-import com.example.model.Category;
-import com.example.model.Priority;
-import com.example.model.Task;
-import com.example.model.Reminder;
+import io.github.eleninspl.taskmanager.model.Category;
+import io.github.eleninspl.taskmanager.model.Priority;
+import io.github.eleninspl.taskmanager.model.Task;
+import io.github.eleninspl.taskmanager.model.Reminder;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;

@@ -1,4 +1,4 @@
-package com.example.model.enums;
+package io.github.eleninspl.taskmanager.model.enums;
 
 // Enum representing the types of reminders that can be set
 public enum ReminderType {

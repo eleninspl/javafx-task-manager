@@ -1,11 +1,11 @@
-package com.example.controller.dialog;
+package io.github.eleninspl.taskmanager.controller.dialog;
 
-import com.example.model.Category;
-import com.example.model.Priority;
-import com.example.model.Task;
-import com.example.model.enums.TaskStatus;
-import com.example.service.CategoryService;
-import com.example.service.PriorityService;
+import io.github.eleninspl.taskmanager.model.Category;
+import io.github.eleninspl.taskmanager.model.Priority;
+import io.github.eleninspl.taskmanager.model.Task;
+import io.github.eleninspl.taskmanager.model.enums.TaskStatus;
+import io.github.eleninspl.taskmanager.service.CategoryService;
+import io.github.eleninspl.taskmanager.service.PriorityService;
 import javafx.beans.binding.Bindings;
 import javafx.collections.FXCollections;
 import javafx.scene.control.*;

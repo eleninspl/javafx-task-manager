@@ -1,10 +1,10 @@
-package com.example.controller;
+package io.github.eleninspl.taskmanager.controller;
 
-import com.example.model.Category;
-import com.example.service.CategoryService;
-import com.example.service.TaskService;
-import com.example.App;
-import com.example.controller.dialog.CategoryDialog;
+import io.github.eleninspl.taskmanager.model.Category;
+import io.github.eleninspl.taskmanager.service.CategoryService;
+import io.github.eleninspl.taskmanager.service.TaskService;
+import io.github.eleninspl.taskmanager.App;
+import io.github.eleninspl.taskmanager.controller.dialog.CategoryDialog;
 import javafx.geometry.Insets;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;

@@ -1,6 +1,6 @@
-package com.example.model;
+package io.github.eleninspl.taskmanager.model;
 
-import com.example.model.enums.TaskStatus;
+import io.github.eleninspl.taskmanager.model.enums.TaskStatus;
 import java.time.LocalDate;
 import java.util.UUID;
 
