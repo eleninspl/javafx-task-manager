@@ -4,7 +4,7 @@
 
 A desktop task manager built with Java 17 and JavaFX. It lets you organize tasks by category and priority, schedule reminders, and track deadlines. All data is saved locally as JSON.
 
-I built it for the Multimedia Technology course at the School of Electrical and Computer Engineering, National Technical University of Athens (NTUA).
+I built it as the semester project for **Multimedia Technology** (Τεχνολογία Πολυμέσων), a 7th-semester course at the School of Electrical and Computer Engineering, National Technical University of Athens (ECE NTUA), academic year 2024–25.
 
 ![Tasks view grouped by category, with an overdue task marked Delayed](docs/screenshots/tasks.png)
 

@@ -14,3 +14,6 @@ medialab/
 
 # OS
 .DS_Store
+
+# Local design-review notes
+.impeccable/
