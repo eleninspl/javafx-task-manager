@@ -190,6 +190,33 @@ public class TaskService {
         }
     }    
 
+    // Mark a task completed, or reopen it. A reopened task that is past its due date becomes Delayed.
+    public void setCompleted(Task task, boolean completed) {
+        TaskStatus status;
+        if (completed) {
+            status = TaskStatus.COMPLETED;
+        } else {
+            boolean overdue = task.getDueDate() != null && task.getDueDate().isBefore(LocalDate.now());
+            status = overdue ? TaskStatus.DELAYED : TaskStatus.OPEN;
+        }
+        updateTask(new Task(task.getId(), task.getTitle(), task.getDescription(), task.getCategory(),
+                task.getPriority(), task.getDueDate(), status));
+    }
+
+    // Number of tasks with the given status
+    public long countWithStatus(TaskStatus status) {
+        return tasks.stream().filter(t -> t.getStatus() == status).count();
+    }
+
+    // Number of unfinished tasks due between today and the given number of days from now (inclusive of today)
+    public long countDueWithin(int days) {
+        LocalDate today = LocalDate.now();
+        return tasks.stream()
+                .filter(t -> t.getStatus() != TaskStatus.COMPLETED && t.getDueDate() != null
+                        && !t.getDueDate().isBefore(today) && t.getDueDate().isBefore(today.plusDays(days)))
+                .count();
+    }
+
     // Check for overdue tasks and update their status to DELAYED
     public void checkOverdueTasks() {
         LocalDate now = LocalDate.now();

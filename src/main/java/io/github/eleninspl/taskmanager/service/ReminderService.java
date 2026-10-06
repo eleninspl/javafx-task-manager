@@ -62,9 +62,49 @@ public class ReminderService {
 
     // Create a new reminder for a task after validating inputs and computing the reminder date
     public Reminder createReminderForTask(Task task, ReminderType type, LocalDate specificDate) {
+        LocalDate reminderDate = resolveReminderDate(task, type, specificDate);
+        Reminder reminder = new Reminder(task.getId(), type, reminderDate);
+        addReminder(reminder);
+        return reminder;
+    }
+
+    // Change an existing reminder (task, type or date) in place, with the same validation as creating one
+    public Reminder updateReminderForTask(String reminderId, Task task, ReminderType type, LocalDate specificDate) {
+        LocalDate reminderDate = resolveReminderDate(task, type, specificDate);
+        for (int i = 0; i < reminders.size(); i++) {
+            Reminder r = reminders.get(i);
+            if (r.getId().equals(reminderId)) {
+                r.setTaskId(task.getId());
+                r.setType(type);
+                r.setReminderDate(reminderDate);
+                reminders.set(i, r); // Replace to notify listeners
+                return r;
+            }
+        }
+        throw new IllegalArgumentException("This reminder no longer exists.");
+    }
+
+    // Return a user-facing message explaining why this reminder cannot be saved, or null if it is valid
+    public String validationError(Task task, ReminderType type, LocalDate specificDate) {
+        try {
+            resolveReminderDate(task, type, specificDate);
+            return null;
+        } catch (IllegalArgumentException e) {
+            return e.getMessage();
+        }
+    }
+
+    // Compute the reminder date for a type and check it against the task's due date and today
+    private LocalDate resolveReminderDate(Task task, ReminderType type, LocalDate specificDate) {
+        if (task == null) {
+            throw new IllegalArgumentException("Choose a task.");
+        }
+        if (type == null) {
+            throw new IllegalArgumentException("Choose when to be reminded.");
+        }
         // Check that we are not setting a reminder for a completed task
         if (task.getStatus() == TaskStatus.COMPLETED) {
-            throw new IllegalArgumentException("Cannot set a reminder for a completed task.");
+            throw new IllegalArgumentException("Completed tasks can't have reminders.");
         }
         LocalDate dueDate = task.getDueDate();
         LocalDate reminderDate;
@@ -81,7 +121,7 @@ public class ReminderService {
                 break;
             case SPECIFIC_DATE:
                 if (specificDate == null) {
-                    throw new IllegalArgumentException("A specific date must be provided for SPECIFIC_DATE reminder.");
+                    throw new IllegalArgumentException("Pick the date for this reminder.");
                 }
                 reminderDate = specificDate;
                 break;
@@ -90,15 +130,14 @@ public class ReminderService {
         }
         // Ensure the reminder date is on or before the due date
         if (reminderDate.isAfter(dueDate)) {
-            throw new IllegalArgumentException("Reminder date must be on or before the task's due date.");
+            throw new IllegalArgumentException("The reminder must be on or before the due date ("
+                    + DateFormats.full(dueDate) + ").");
         }
         // Ensure the reminder date is not in the past
         if (reminderDate.isBefore(LocalDate.now())) {
-            throw new IllegalArgumentException("Reminder date is in the past.");
+            throw new IllegalArgumentException("That reminder would fall on " + DateFormats.full(reminderDate)
+                    + ", which has already passed.");
         }
-        // Create the reminder and add it to the list
-        Reminder reminder = new Reminder(task.getId(), type, reminderDate);
-        addReminder(reminder);
-        return reminder;
+        return reminderDate;
     }
 }

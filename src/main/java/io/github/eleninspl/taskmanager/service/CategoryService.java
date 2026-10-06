@@ -43,12 +43,21 @@ public class CategoryService {
         }
     }
 
-    // Add a new category; if the name is the default, return the default category
+    // Return a user-facing message explaining why a name can't be used, or null if it is fine.
+    // excludeId is the category being renamed (it may keep its own name).
+    public String nameError(String name, String excludeId) {
+        String trimmed = name == null ? "" : name.trim();
+        if (trimmed.isEmpty()) return "Enter a name.";
+        boolean taken = categories.stream()
+                .anyMatch(c -> !c.getId().equals(excludeId) && c.getName().equalsIgnoreCase(trimmed));
+        return taken ? "There is already a category called \"" + trimmed + "\"." : null;
+    }
+
+    // Add a new category with a valid, unique name
     public Category addCategory(String name) {
-        if (name.equals(NO_CATEGORY_NAME)) {
-            return noCategory;
-        }
-        Category category = new Category(name);
+        String error = nameError(name, null);
+        if (error != null) throw new IllegalArgumentException(error);
+        Category category = new Category(name.trim());
         categories.add(category);
         return category;
     }
@@ -62,7 +71,9 @@ public class CategoryService {
             Category cat = opt.get();
             // Do not update the default category
             if (cat.getName().equals(NO_CATEGORY_NAME)) return false;
-            cat.setName(newName);
+            String error = nameError(newName, categoryId);
+            if (error != null) throw new IllegalArgumentException(error);
+            cat.setName(newName.trim());
             int index = categories.indexOf(cat);
             if (index != -1) {
                 // Replace the category in the list to trigger UI updates

@@ -45,9 +45,21 @@ public class PriorityService {
         }
     }
 
-    // Add a new priority to the list
+    // Return a user-facing message explaining why a name can't be used, or null if it is fine.
+    // excludeId is the priority being renamed (it may keep its own name).
+    public String nameError(String name, String excludeId) {
+        String trimmed = name == null ? "" : name.trim();
+        if (trimmed.isEmpty()) return "Enter a name.";
+        boolean taken = priorities.stream()
+                .anyMatch(p -> !p.getId().equals(excludeId) && p.getName() != null && p.getName().equalsIgnoreCase(trimmed));
+        return taken ? "There is already a priority called \"" + trimmed + "\"." : null;
+    }
+
+    // Add a new priority with a valid, unique name
     public Priority addPriority(String name) {
-        Priority newPriority = new Priority(name);
+        String error = nameError(name, null);
+        if (error != null) throw new IllegalArgumentException(error);
+        Priority newPriority = new Priority(name.trim());
         priorities.add(newPriority);
         return newPriority;
     }
@@ -62,7 +74,9 @@ public class PriorityService {
                 .findFirst();
         if (opt.isPresent()) {
             Priority pri = opt.get();
-            pri.setName(newName);
+            String error = nameError(newName, priorityId);
+            if (error != null) throw new IllegalArgumentException(error);
+            pri.setName(newName.trim());
             int index = priorities.indexOf(pri);
             if (index != -1) {
                 priorities.set(index, pri);
