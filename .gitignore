@@ -1,0 +1,16 @@
+# Build output
+target/
+
+# Runtime data written by the app
+medialab/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.classpath
+.project
+.settings/
+
+# OS
+.DS_Store
